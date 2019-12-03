@@ -117,7 +117,7 @@ func handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.NewChannel) (View
 }
 
 func handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
-	fr, err := parseForwardRequest(req.Payload)
+	fr, err := ParseForwardRequest(req.Payload)
 	if err != nil {
 		if req.WantReply {
 			req.Reply(false, nil)

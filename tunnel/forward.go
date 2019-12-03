@@ -45,7 +45,7 @@ type ForwardRequest struct {
 	Port    uint32
 }
 
-func parseForwardRequest(payload []byte) (ForwardRequest, error) {
+func ParseForwardRequest(payload []byte) (ForwardRequest, error) {
 	req := ForwardRequest{}
 
 	address, err := helpers.UnpackString(&payload)
