@@ -25,10 +25,7 @@ func NewSession(views chan View, forwards chan Forwarder) *Session {
 			if !ok {
 				break
 			}
-
-			session.lock.Lock()
-			session.views = append(session.views, view)
-			session.lock.Unlock()
+			go session.handleView(view)
 		}
 	}()
 	go func() {
@@ -37,47 +34,7 @@ func NewSession(views chan View, forwards chan Forwarder) *Session {
 			if !ok {
 				break
 			}
-
-			go func() {
-				ln, err := net.Listen("tcp", ":8080")
-				if err != nil {
-					log.Print("Could not listen on :8080")
-					return
-				}
-				for {
-					cl, err := ln.Accept()
-					if err != nil {
-						log.Print("Could not accept connection")
-						return
-					}
-
-					tunn, err := forward.Connect()
-					if err != nil {
-						log.Print("Could not open remote connection")
-						cl.Close()
-						continue
-					}
-
-					var closer sync.Once
-					go func() {
-						io.Copy(tunn, cl)
-						closer.Do(func() {
-							cl.Close()
-							tunn.Close()
-						})
-					}()
-					go func() {
-						io.Copy(cl, tunn)
-						closer.Do(func() {
-							cl.Close()
-							tunn.Close()
-						})
-					}()
-				}
-
-				// FIXME: this needs closing
-				ln.Close()
-			}()
+			go session.handleForwarder(forward)
 		}
 	}()
 
@@ -95,4 +52,51 @@ func (session *Session) Broadcast(msg []byte) (err error) {
 	session.lock.Unlock()
 
 	return
+}
+
+func (session *Session) handleView(view View) {
+	session.lock.Lock()
+	session.views = append(session.views, view)
+	session.lock.Unlock()
+}
+
+func (session *Session) handleForwarder(forward Forwarder) {
+	ln, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Print("Could not listen on :8080")
+		return
+	}
+	for {
+		cl, err := ln.Accept()
+		if err != nil {
+			log.Print("Could not accept connection")
+			return
+		}
+
+		tunn, err := forward.Connect()
+		if err != nil {
+			log.Print("Could not open remote connection")
+			cl.Close()
+			continue
+		}
+
+		var closer sync.Once
+		go func() {
+			io.Copy(tunn, cl)
+			closer.Do(func() {
+				cl.Close()
+				tunn.Close()
+			})
+		}()
+		go func() {
+			io.Copy(cl, tunn)
+			closer.Do(func() {
+				cl.Close()
+				tunn.Close()
+			})
+		}()
+	}
+
+	// FIXME: this needs closing
+	ln.Close()
 }
