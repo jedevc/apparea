@@ -80,20 +80,19 @@ func (session *Session) handleForwarder(forward Forwarder) {
 			continue
 		}
 
-		var closer sync.Once
+		closer := func() {
+			cl.Close()
+			tunn.Close()
+		}
+
+		var once sync.Once
 		go func() {
 			io.Copy(tunn, cl)
-			closer.Do(func() {
-				cl.Close()
-				tunn.Close()
-			})
+			once.Do(closer)
 		}()
 		go func() {
 			io.Copy(cl, tunn)
-			closer.Do(func() {
-				cl.Close()
-				tunn.Close()
-			})
+			once.Do(closer)
 		}()
 	}
 
