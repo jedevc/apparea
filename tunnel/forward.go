@@ -26,7 +26,7 @@ func (f *Forwarder) Connect() (Tunnel, error) {
 	remotePort, _ := strconv.Atoi(remotePortStr)
 
 	data := make([]byte, 0)
-	helpers.PackString(&data, f.Request.Address)
+	helpers.PackString(&data, f.Request.Host)
 	helpers.PackInt(&data, f.Request.Port)
 	helpers.PackString(&data, remoteAddress)
 	helpers.PackInt(&data, uint32(remotePort))
@@ -41,18 +41,18 @@ func (f *Forwarder) Connect() (Tunnel, error) {
 }
 
 type ForwardRequest struct {
-	Address string
-	Port    uint32
+	Host string
+	Port uint32
 }
 
 func ParseForwardRequest(payload []byte) (ForwardRequest, error) {
 	req := ForwardRequest{}
 
-	address, err := helpers.UnpackString(&payload)
+	host, err := helpers.UnpackString(&payload)
 	if err != nil {
 		return req, err
 	}
-	req.Address = address
+	req.Host = host
 
 	port, err := helpers.UnpackInt(&payload)
 	if err != nil {
@@ -65,4 +65,8 @@ func ParseForwardRequest(payload []byte) (ForwardRequest, error) {
 	}
 
 	return req, nil
+}
+
+func (fr ForwardRequest) Address() string {
+	return fr.Host + ":" + strconv.FormatUint(uint64(fr.Port), 10)
 }

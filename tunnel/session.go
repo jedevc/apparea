@@ -61,7 +61,7 @@ func (session *Session) handleView(view View) {
 }
 
 func (session *Session) handleForwarder(forward Forwarder) {
-	ln, err := net.Listen("tcp", ":8080")
+	ln, err := net.Listen("tcp", forward.Request.Address())
 	if err != nil {
 		log.Print("Could not listen on :8080")
 		return
