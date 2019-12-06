@@ -61,11 +61,12 @@ func (session *Session) handleView(view View) {
 }
 
 func (session *Session) handleForwarder(forward Forwarder) {
-	ln, err := net.Listen("tcp", forward.Request.Address())
+	ln, err := net.Listen("tcp", forward.Address())
 	if err != nil {
-		log.Print("Could not listen on :8080")
+		log.Printf("Could not listen on %s", forward.Address())
 		return
 	}
+
 	for {
 		cl, err := ln.Accept()
 		if err != nil {

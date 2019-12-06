@@ -9,19 +9,24 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type Forwarder struct {
+type Forwarder interface {
+	Connect() (Tunnel, error)
+	Address() string
+}
+
+type RawForwarder struct {
 	Request ForwardRequest
 	conn    *ssh.ServerConn
 }
 
-func NewForwarder(conn *ssh.ServerConn, req ForwardRequest) Forwarder {
-	return Forwarder{
+func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) RawForwarder {
+	return RawForwarder{
 		Request: req,
 		conn:    conn,
 	}
 }
 
-func (f *Forwarder) Connect() (Tunnel, error) {
+func (f RawForwarder) Connect() (Tunnel, error) {
 	remoteAddress, remotePortStr, _ := net.SplitHostPort(f.conn.RemoteAddr().String())
 	remotePort, _ := strconv.Atoi(remotePortStr)
 
@@ -38,6 +43,10 @@ func (f *Forwarder) Connect() (Tunnel, error) {
 	go ssh.DiscardRequests(reqs)
 
 	return ch, nil
+}
+
+func (f RawForwarder) Address() string {
+	return f.Request.Address()
 }
 
 type ForwardRequest struct {

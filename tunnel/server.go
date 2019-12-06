@@ -122,12 +122,12 @@ func handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
 		if req.WantReply {
 			req.Reply(false, nil)
 		}
-		return Forwarder{}, err
+		return nil, err
 	}
 
 	bs := make([]byte, 0)
 	helpers.PackInt(&bs, fr.Port)
 	req.Reply(true, bs)
 
-	return NewForwarder(conn, fr), nil
+	return NewRawForwarder(conn, fr), nil
 }
