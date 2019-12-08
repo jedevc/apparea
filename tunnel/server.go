@@ -129,5 +129,11 @@ func handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
 	helpers.PackInt(&bs, fr.Port)
 	req.Reply(true, bs)
 
-	return NewRawForwarder(conn, fr), nil
+	var fwd Forwarder
+	if fr.Port == 80 {
+		fwd = NewHTTPForwarder(conn, fr)
+	} else {
+		fwd = NewRawForwarder(conn, fr)
+	}
+	return fwd, nil
 }

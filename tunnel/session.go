@@ -1,8 +1,6 @@
 package tunnel
 
 import (
-	"io"
-	"net"
 	"sync"
 
 	"log"
@@ -61,42 +59,9 @@ func (session *Session) handleView(view View) {
 }
 
 func (session *Session) handleForwarder(forward Forwarder) {
-	ln, err := net.Listen("tcp", forward.Address())
+	err := forward.ListenAndServe()
 	if err != nil {
-		log.Printf("Could not listen on %s", forward.Address())
+		log.Print(err)
 		return
 	}
-
-	for {
-		cl, err := ln.Accept()
-		if err != nil {
-			log.Print("Could not accept connection")
-			return
-		}
-
-		tunn, err := forward.Connect()
-		if err != nil {
-			log.Print("Could not open remote connection")
-			cl.Close()
-			continue
-		}
-
-		closer := func() {
-			cl.Close()
-			tunn.Close()
-		}
-
-		var once sync.Once
-		go func() {
-			io.Copy(tunn, cl)
-			once.Do(closer)
-		}()
-		go func() {
-			io.Copy(cl, tunn)
-			once.Do(closer)
-		}()
-	}
-
-	// FIXME: this needs closing
-	ln.Close()
 }
