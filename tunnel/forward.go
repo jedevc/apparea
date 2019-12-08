@@ -55,35 +55,37 @@ func (f RawForwarder) ListenAndServe() error {
 		return fmt.Errorf("Could not listen on %s", f.Request.Address())
 	}
 
-	for {
-		out, err := ln.Accept()
-		if err != nil {
-			log.Printf("Could not accept connection")
-			continue
-		}
+	go func() {
+		for {
+			out, err := ln.Accept()
+			if err != nil {
+				log.Printf("Could not accept connection")
+				continue
+			}
 
-		in, err := f.connect()
-		if err != nil {
-			log.Print("Could not open remote connection")
-			out.Close()
-			continue
-		}
-		closer := func() {
-			in.Close()
-			out.Close()
-		}
+			in, err := f.connect()
+			if err != nil {
+				log.Print("Could not open remote connection")
+				out.Close()
+				continue
+			}
+			closer := func() {
+				in.Close()
+				out.Close()
+			}
 
-		var once sync.Once
-		go func() {
-			io.Copy(in, out)
-			once.Do(closer)
-		}()
-		go func() {
-			io.Copy(out, in)
-			once.Do(closer)
-		}()
+			var once sync.Once
+			go func() {
+				io.Copy(in, out)
+				once.Do(closer)
+			}()
+			go func() {
+				io.Copy(out, in)
+				once.Do(closer)
+			}()
 
-	}
+		}
+	}()
 
 	// FIXME: listener is never closed
 	return nil
@@ -160,7 +162,7 @@ func (f HTTPForwarder) ListenAndServe() error {
 }
 
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
-	// reuse connections if possible?
+	// TODO: reuse connections if possible?
 	tunn, err := f.connect()
 	if err != nil {
 		return nil
