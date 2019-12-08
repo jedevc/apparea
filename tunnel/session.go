@@ -7,8 +7,9 @@ import (
 )
 
 type Session struct {
-	views []View
-	lock  *sync.Mutex
+	views    []View
+	forwards []Forwarder
+	lock     *sync.Mutex
 }
 
 func NewSession(views chan View, forwards chan Forwarder) *Session {
@@ -16,6 +17,8 @@ func NewSession(views chan View, forwards chan Forwarder) *Session {
 		views: []View{},
 		lock:  new(sync.Mutex),
 	}
+
+	var once sync.Once
 
 	go func() {
 		for {
@@ -25,6 +28,8 @@ func NewSession(views chan View, forwards chan Forwarder) *Session {
 			}
 			go session.handleView(view)
 		}
+
+		once.Do(session.Close)
 	}()
 	go func() {
 		for {
@@ -34,6 +39,8 @@ func NewSession(views chan View, forwards chan Forwarder) *Session {
 			}
 			go session.handleForwarder(forward)
 		}
+
+		once.Do(session.Close)
 	}()
 
 	return &session
@@ -52,6 +59,16 @@ func (session *Session) Broadcast(msg []byte) (err error) {
 	return
 }
 
+func (session *Session) Close() {
+	session.lock.Lock()
+	for _, forward := range session.forwards {
+		forward.Close()
+	}
+	session.forwards = nil
+	session.views = nil
+	session.lock.Unlock()
+}
+
 func (session *Session) handleView(view View) {
 	session.lock.Lock()
 	session.views = append(session.views, view)
@@ -59,6 +76,10 @@ func (session *Session) handleView(view View) {
 }
 
 func (session *Session) handleForwarder(forward Forwarder) {
+	session.lock.Lock()
+	session.forwards = append(session.forwards, forward)
+	session.lock.Unlock()
+
 	err := forward.ListenAndServe()
 	if err != nil {
 		log.Print(err)

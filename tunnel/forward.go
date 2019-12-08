@@ -16,22 +16,26 @@ import (
 
 type Forwarder interface {
 	ListenAndServe() error
+	Close()
 }
 
 type RawForwarder struct {
-	Request   ForwardRequest
-	connector *ssh.ServerConn
+	Request  ForwardRequest
+	baseConn *ssh.ServerConn
+
+	closed   bool
+	listener net.Listener
 }
 
-func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) RawForwarder {
-	return RawForwarder{
-		Request:   req,
-		connector: conn,
+func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
+	return &RawForwarder{
+		Request:  req,
+		baseConn: conn,
 	}
 }
 
 func (f RawForwarder) connect() (Tunnel, error) {
-	remoteAddress, remotePortStr, _ := net.SplitHostPort(f.connector.RemoteAddr().String())
+	remoteAddress, remotePortStr, _ := net.SplitHostPort(f.baseConn.RemoteAddr().String())
 	remotePort, _ := strconv.Atoi(remotePortStr)
 
 	data := make([]byte, 0)
@@ -40,7 +44,7 @@ func (f RawForwarder) connect() (Tunnel, error) {
 	helpers.PackString(&data, remoteAddress)
 	helpers.PackInt(&data, uint32(remotePort))
 
-	ch, reqs, err := f.connector.OpenChannel("forwarded-tcpip", data)
+	ch, reqs, err := f.baseConn.OpenChannel("forwarded-tcpip", data)
 	if err != nil {
 		return nil, fmt.Errorf("could not open channel (is the port open?)")
 	}
@@ -49,46 +53,53 @@ func (f RawForwarder) connect() (Tunnel, error) {
 	return ch, nil
 }
 
-func (f RawForwarder) ListenAndServe() error {
+func (f *RawForwarder) ListenAndServe() error {
 	ln, err := net.Listen("tcp", f.Request.Address())
 	if err != nil {
 		return fmt.Errorf("Could not listen on %s", f.Request.Address())
 	}
+	f.listener = ln
 
 	go func() {
-		for {
-			out, err := ln.Accept()
+		for !f.closed {
+			incoming, err := f.listener.Accept()
 			if err != nil {
 				log.Printf("Could not accept connection")
 				continue
 			}
 
-			in, err := f.connect()
+			outgoing, err := f.connect()
 			if err != nil {
 				log.Print("Could not open remote connection")
-				out.Close()
+				incoming.Close()
 				continue
 			}
 			closer := func() {
-				in.Close()
-				out.Close()
+				incoming.Close()
+				outgoing.Close()
 			}
 
 			var once sync.Once
 			go func() {
-				io.Copy(in, out)
+				io.Copy(incoming, outgoing)
 				once.Do(closer)
 			}()
 			go func() {
-				io.Copy(out, in)
+				io.Copy(outgoing, incoming)
 				once.Do(closer)
 			}()
 
 		}
 	}()
 
-	// FIXME: listener is never closed
 	return nil
+}
+
+func (f *RawForwarder) Close() {
+	f.closed = true
+	if f.listener != nil {
+		f.listener.Close()
+	}
 }
 
 type HTTPForwarder struct {
@@ -97,10 +108,10 @@ type HTTPForwarder struct {
 }
 
 var httpServer *http.Server = nil
-var httpMap map[string]HTTPForwarder
+var httpMap map[string]*HTTPForwarder
 
-func NewHTTPForwarder(conn *ssh.ServerConn, req ForwardRequest) HTTPForwarder {
-	return HTTPForwarder{
+func NewHTTPForwarder(conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
+	return &HTTPForwarder{
 		Request:   req,
 		connector: conn,
 	}
@@ -125,7 +136,7 @@ func (f HTTPForwarder) connect() (Tunnel, error) {
 	return ch, nil
 }
 
-func (f HTTPForwarder) ListenAndServe() error {
+func (f *HTTPForwarder) ListenAndServe() error {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		host := r.Host
 		fr, ok := httpMap[host]
@@ -149,7 +160,7 @@ func (f HTTPForwarder) ListenAndServe() error {
 		// TODO: check for errors on listening
 		go httpServer.ListenAndServe()
 
-		httpMap = make(map[string]HTTPForwarder)
+		httpMap = make(map[string]*HTTPForwarder)
 	}
 
 	hostname := f.connector.User() + ".apparea.dev"
@@ -159,6 +170,16 @@ func (f HTTPForwarder) ListenAndServe() error {
 
 	httpMap[hostname] = f
 	return nil
+}
+
+func (f *HTTPForwarder) Close() {
+	hostname := f.connector.User() + ".apparea.dev"
+	delete(httpMap, hostname)
+
+	if len(httpMap) == 0 {
+		httpServer.Close()
+		httpServer = nil
+	}
 }
 
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
