@@ -150,9 +150,12 @@ func (f HTTPForwarder) ListenAndServe() error {
 		httpMap = make(map[string]HTTPForwarder)
 	}
 
-	// TODO: need to have different hostnames
-	httpMap["test"] = f
+	hostname := f.connector.User() + ".apparea.dev"
+	if _, ok := httpMap[hostname]; ok {
+		return fmt.Errorf("site name already in use")
+	}
 
+	httpMap[hostname] = f
 	return nil
 }
 
