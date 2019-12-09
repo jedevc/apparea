@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Run(address string, config *ssh.ServerConfig) <-chan *Session {
+func Run(address string, config Config) <-chan *Session {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s (%s)", address, err)
@@ -27,7 +27,7 @@ func Run(address string, config *ssh.ServerConfig) <-chan *Session {
 				continue
 			}
 
-			sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config)
+			sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config.SSHConfig)
 			if err != nil {
 				log.Printf("Failed to handshake (%s)", err)
 				continue
