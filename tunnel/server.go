@@ -10,7 +10,15 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Run(address string, config Config) <-chan *Session {
+type Server struct {
+	Config *Config
+}
+
+func (server *Server) Run(address string) <-chan *Session {
+	if server.Config == nil {
+		log.Fatalf("Internal error: no config provided")
+	}
+
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Failed to listen on %s (%s)", address, err)
@@ -27,13 +35,13 @@ func Run(address string, config Config) <-chan *Session {
 				continue
 			}
 
-			sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config.SSHConfig)
+			sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, server.Config.SSHConfig)
 			if err != nil {
 				log.Printf("Failed to handshake (%s)", err)
 				continue
 			}
 
-			session := launchSession(sshConn, chans, reqs)
+			session := server.launchSession(sshConn, chans, reqs)
 
 			sessions <- session
 		}
@@ -42,7 +50,7 @@ func Run(address string, config Config) <-chan *Session {
 	return sessions
 }
 
-func launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *Session {
+func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *Session {
 	log.Printf("New SSH connection from %s (%s)", conn.RemoteAddr(), conn.ClientVersion())
 
 	views := make(chan View)
@@ -54,7 +62,7 @@ func launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-cha
 	go func() {
 		for req := range reqs {
 			if req.Type == "tcpip-forward" {
-				forward, err := handleTCPIP(conn, req)
+				forward, err := server.handleTCPIP(conn, req)
 				if err != nil {
 					log.Printf("internal error: %s", err)
 					continue
@@ -76,7 +84,7 @@ func launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-cha
 	go func() {
 		for newChannel := range chans {
 			if t := newChannel.ChannelType(); t == "session" {
-				view, err := handleSessionChannel(conn, newChannel)
+				view, err := server.handleSessionChannel(conn, newChannel)
 				if err != nil {
 					log.Printf("internal error: %s", err)
 					continue
@@ -96,7 +104,7 @@ func launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-cha
 	return session
 }
 
-func handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.NewChannel) (View, error) {
+func (server *Server) handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.NewChannel) (View, error) {
 	session, requests, err := newChannel.Accept()
 	if err != nil {
 		return nil, err
@@ -116,7 +124,7 @@ func handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.NewChannel) (View
 	return NewStatusView(session), nil
 }
 
-func handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
+func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
 	fr, err := ParseForwardRequest(req.Payload)
 	if err != nil {
 		if req.WantReply {
@@ -131,9 +139,9 @@ func handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
 
 	var fwd Forwarder
 	if fr.Port == 80 {
-		fwd = NewHTTPForwarder(conn, fr)
+		fwd = NewHTTPForwarder(server.Config, conn, fr)
 	} else {
-		fwd = NewRawForwarder(conn, fr)
+		fwd = NewRawForwarder(server.Config, conn, fr)
 	}
 	return fwd, nil
 }

@@ -21,15 +21,17 @@ type Forwarder interface {
 
 type RawForwarder struct {
 	Request  ForwardRequest
+	config   *Config
 	baseConn *ssh.ServerConn
 
 	closed   bool
 	listener net.Listener
 }
 
-func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
+func NewRawForwarder(config *Config, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
 	return &RawForwarder{
 		Request:  req,
+		config:   config,
 		baseConn: conn,
 	}
 }
@@ -104,15 +106,17 @@ func (f *RawForwarder) Close() {
 
 type HTTPForwarder struct {
 	Request   ForwardRequest
+	config    *Config
 	connector *ssh.ServerConn
 }
 
 var httpServer *http.Server = nil
 var httpMap map[string]*HTTPForwarder
 
-func NewHTTPForwarder(conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
+func NewHTTPForwarder(config *Config, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
 	return &HTTPForwarder{
 		Request:   req,
+		config:    config,
 		connector: conn,
 	}
 }
@@ -163,7 +167,7 @@ func (f *HTTPForwarder) ListenAndServe() error {
 		httpMap = make(map[string]*HTTPForwarder)
 	}
 
-	hostname := f.connector.User() + ".apparea.dev"
+	hostname := f.connector.User() + "." + f.config.Hostname
 	if _, ok := httpMap[hostname]; ok {
 		return fmt.Errorf("site name already in use")
 	}
@@ -173,7 +177,7 @@ func (f *HTTPForwarder) ListenAndServe() error {
 }
 
 func (f *HTTPForwarder) Close() {
-	hostname := f.connector.User() + ".apparea.dev"
+	hostname := f.connector.User() + "." + f.config.Hostname
 	delete(httpMap, hostname)
 
 	if len(httpMap) == 0 {

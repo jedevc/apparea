@@ -41,7 +41,10 @@ func main() {
 						return err
 					}
 
-					sessions := tunnel.Run("0.0.0.0:2200", config)
+					server := &tunnel.Server{
+						Config: &config,
+					}
+					sessions := server.Run("0.0.0.0:2200")
 					for range sessions {
 					}
 
