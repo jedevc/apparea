@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 type Forwarder interface {
 	ListenAndServe() error
 	Close()
+
+	ListenerAddress() string
 }
 
 type RawForwarder struct {
@@ -24,7 +27,7 @@ type RawForwarder struct {
 	config   *Config
 	baseConn *ssh.ServerConn
 
-	closed   bool
+	closed   bool // TODO: Needs to be atomic
 	listener net.Listener
 }
 
@@ -101,6 +104,14 @@ func (f *RawForwarder) Close() {
 	f.closed = true
 	if f.listener != nil {
 		f.listener.Close()
+	}
+}
+
+func (f *RawForwarder) ListenerAddress() string {
+	if f.listener == nil {
+		return ""
+	} else {
+		return f.listener.Addr().String()
 	}
 }
 
@@ -183,6 +194,20 @@ func (f *HTTPForwarder) Close() {
 	if len(httpMap) == 0 {
 		httpServer.Close()
 		httpServer = nil
+	}
+}
+
+func (f *HTTPForwarder) ListenerAddress() string {
+	hostname := f.connector.User() + "." + f.config.Hostname
+	if _, ok := httpMap[hostname]; !ok {
+		return ""
+	} else {
+		parts := strings.Split(httpServer.Addr, ":")
+		if len(parts) == 2 {
+			return hostname + ":" + parts[1]
+		} else {
+			return hostname
+		}
 	}
 }
 

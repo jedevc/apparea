@@ -9,7 +9,8 @@ import (
 type Session struct {
 	views    []View
 	forwards []Forwarder
-	lock     *sync.Mutex
+
+	lock *sync.Mutex
 }
 
 func NewSession(views chan View, forwards chan Forwarder) *Session {
@@ -72,17 +73,22 @@ func (session *Session) Close() {
 func (session *Session) handleView(view View) {
 	session.lock.Lock()
 	session.views = append(session.views, view)
+	for _, forward := range session.forwards {
+		view.Write([]byte("Listening on " + forward.ListenerAddress()))
+	}
 	session.lock.Unlock()
 }
 
 func (session *Session) handleForwarder(forward Forwarder) {
-	session.lock.Lock()
-	session.forwards = append(session.forwards, forward)
-	session.lock.Unlock()
-
 	err := forward.ListenAndServe()
 	if err != nil {
 		log.Print(err)
 		return
 	}
+
+	session.lock.Lock()
+	session.forwards = append(session.forwards, forward)
+	session.lock.Unlock()
+
+	session.Broadcast([]byte("Listening on " + forward.ListenerAddress()))
 }
