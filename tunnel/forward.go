@@ -110,9 +110,8 @@ func (f *RawForwarder) Close() {
 func (f *RawForwarder) ListenerAddress() string {
 	if f.listener == nil {
 		return ""
-	} else {
-		return f.listener.Addr().String()
 	}
+	return f.listener.Addr().String()
 }
 
 type HTTPForwarder struct {
