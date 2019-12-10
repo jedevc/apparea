@@ -74,6 +74,13 @@ func InitializeConfigs(force bool) error {
 		return err
 	}
 
+	authKeyPath := filepath.Join(configDirectory, "authorized_keys")
+	authKeyFile, err := os.Create(authKeyPath)
+	if err != nil {
+		return err
+	}
+	authKeyFile.Close()
+
 	return nil
 }
 
@@ -93,19 +100,43 @@ func LoadConfig() (config Config, err error) {
 		return
 	}
 
-	config.SSHConfig = LoadSSHServerConfig()
+	config.SSHConfig, err = LoadServerConfig()
+	if err != nil {
+		return
+	}
+
 	return
 }
 
-func LoadSSHServerConfig() *ssh.ServerConfig {
+func LoadServerConfig() (*ssh.ServerConfig, error) {
+	authKeyPath := filepath.Join(configDirectory, "authorized_keys")
+	authKeyBytes, err := ioutil.ReadFile(authKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	authKeys := map[string]bool{}
+	for len(authKeyBytes) > 0 {
+		pubKey, _, _, rest, err := ssh.ParseAuthorizedKey(authKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		authKeys[string(pubKey.Marshal())] = true
+		authKeyBytes = rest
+	}
+
 	config := &ssh.ServerConfig{
-		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-			if c.User() == "foo" && string(pass) == "bar" {
-				return nil, nil
+		PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+			if authKeys[string(key.Marshal())] {
+				return &ssh.Permissions{
+					Extensions: map[string]string{
+						"pubkey-fp": ssh.FingerprintSHA256(key),
+					},
+				}, nil
 			}
-			return nil, fmt.Errorf("password rejected for %q", c.User())
+			return nil, fmt.Errorf("Unknown key provided")
 		},
-		// NoClientAuth: true,
 	}
 
 	privateBytes, err := ioutil.ReadFile(filepath.Join(configDirectory, "id_rsa"))
@@ -120,5 +151,5 @@ func LoadSSHServerConfig() *ssh.ServerConfig {
 
 	config.AddHostKey(private)
 
-	return config
+	return config, nil
 }
