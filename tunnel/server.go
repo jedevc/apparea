@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/jedevc/AppArea/config"
+	"github.com/jedevc/AppArea/forward"
 	"github.com/jedevc/AppArea/helpers"
 	"golang.org/x/crypto/ssh"
 )
@@ -55,7 +56,7 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 	log.Printf("New SSH connection from %s (%s)", conn.RemoteAddr(), conn.ClientVersion())
 
 	views := make(chan View)
-	forwards := make(chan Forwarder)
+	forwards := make(chan forward.Forwarder)
 	session := NewSession(views, forwards)
 
 	var closer sync.Once
@@ -125,8 +126,8 @@ func (server *Server) handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.
 	return NewStatusView(session), nil
 }
 
-func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwarder, error) {
-	fr, err := ParseForwardRequest(req.Payload)
+func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (forward.Forwarder, error) {
+	fr, err := forward.ParseForwardRequest(req.Payload)
 	if err != nil {
 		if req.WantReply {
 			req.Reply(false, nil)
@@ -138,11 +139,11 @@ func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (Forwa
 	helpers.PackInt(&bs, fr.Port)
 	req.Reply(true, bs)
 
-	var fwd Forwarder
+	var fwd forward.Forwarder
 	if fr.Port == 80 {
-		fwd = NewHTTPForwarder(server.Config, conn, fr)
+		fwd = forward.NewHTTPForwarder(server.Config, conn, fr)
 	} else {
-		fwd = NewRawForwarder(server.Config, conn, fr)
+		fwd = forward.NewRawForwarder(server.Config, conn, fr)
 	}
 	return fwd, nil
 }

@@ -4,16 +4,18 @@ import (
 	"sync"
 
 	"log"
+
+	"github.com/jedevc/AppArea/forward"
 )
 
 type Session struct {
 	views    []View
-	forwards []Forwarder
+	forwards []forward.Forwarder
 
 	lock *sync.Mutex
 }
 
-func NewSession(views chan View, forwards chan Forwarder) *Session {
+func NewSession(views chan View, forwards chan forward.Forwarder) *Session {
 	session := Session{
 		views: []View{},
 		lock:  new(sync.Mutex),
@@ -79,7 +81,7 @@ func (session *Session) handleView(view View) {
 	session.lock.Unlock()
 }
 
-func (session *Session) handleForwarder(forward Forwarder) {
+func (session *Session) handleForwarder(forward forward.Forwarder) {
 	err := forward.ListenAndServe()
 	if err != nil {
 		log.Print(err)
