@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/jedevc/AppArea/config"
@@ -142,7 +143,17 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 
 	var fwd forward.Forwarder
 	if fr.Port == 80 {
-		hostname := conn.User() + "." + server.Hostname
+		user, parts, ok := server.Config.LookupUser(conn.User())
+		if !ok {
+			panic("Internal error: user should exist")
+		}
+
+		var hostname string
+		if len(parts) == 0 {
+			hostname = fmt.Sprintf("%s.%s", user.Username, server.Hostname)
+		} else {
+			hostname = fmt.Sprintf("%s.%s.%s", strings.Join(parts, "."), user.Username, server.Hostname)
+		}
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
 	} else {
 		fwd = forward.NewRawForwarder(conn, fr)

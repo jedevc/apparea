@@ -15,7 +15,7 @@ func LoadConfig() (config Config, err error) {
 		return
 	}
 
-	config.SSHConfig, err = makeSSHServerConfig(config.Users)
+	err = config.makeSSHServerConfig()
 	if err != nil {
 		return
 	}
@@ -23,10 +23,10 @@ func LoadConfig() (config Config, err error) {
 	return
 }
 
-func makeSSHServerConfig(users map[string]User) (*ssh.ServerConfig, error) {
-	config := &ssh.ServerConfig{
+func (config *Config) makeSSHServerConfig() error {
+	sshConfig := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			user, ok := users[c.User()]
+			user, _, ok := config.LookupUser(c.User())
 			if ok && user.CheckKey(key) {
 				return &ssh.Permissions{
 					Extensions: map[string]string{
@@ -48,9 +48,10 @@ func makeSSHServerConfig(users map[string]User) (*ssh.ServerConfig, error) {
 		log.Fatalf("Could not parse server private key: %s", err)
 	}
 
-	config.AddHostKey(private)
+	sshConfig.AddHostKey(private)
 
-	return config, nil
+	config.SSHConfig = sshConfig
+	return nil
 }
 
 func loadUsers() (map[string]User, error) {
