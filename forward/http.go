@@ -10,14 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jedevc/AppArea/config"
 	"github.com/jedevc/AppArea/helpers"
 	"golang.org/x/crypto/ssh"
 )
 
 type HTTPForwarder struct {
 	Request   ForwardRequest
-	config    *config.Config
+	Hostname  string
 	connector *ssh.ServerConn
 }
 
@@ -25,10 +24,10 @@ var httpServer *http.Server = nil
 var httpMap map[string]*HTTPForwarder
 var httpLock sync.Mutex
 
-func NewHTTPForwarder(config *config.Config, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
+func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
 	return &HTTPForwarder{
 		Request:   req,
-		config:    config,
+		Hostname:  hostname,
 		connector: conn,
 	}
 }
@@ -84,13 +83,12 @@ func (f *HTTPForwarder) ListenAndServe() error {
 		httpMap = make(map[string]*HTTPForwarder)
 	}
 
-	hostname := f.hostname()
-	if _, ok := httpMap[hostname]; ok {
+	if _, ok := httpMap[f.Hostname]; ok {
 		httpLock.Unlock()
 		return fmt.Errorf("site name already in use")
 	}
 
-	httpMap[hostname] = f
+	httpMap[f.Hostname] = f
 
 	httpLock.Unlock()
 
@@ -98,10 +96,8 @@ func (f *HTTPForwarder) ListenAndServe() error {
 }
 
 func (f *HTTPForwarder) Close() {
-	hostname := f.hostname()
-
 	httpLock.Lock()
-	delete(httpMap, hostname)
+	delete(httpMap, f.Hostname)
 
 	if len(httpMap) == 0 {
 		httpServer.Close()
@@ -111,10 +107,8 @@ func (f *HTTPForwarder) Close() {
 }
 
 func (f *HTTPForwarder) ListenerAddress() string {
-	hostname := f.hostname()
-
 	httpLock.Lock()
-	_, ok := httpMap[hostname]
+	_, ok := httpMap[f.Hostname]
 	httpLock.Unlock()
 
 	if !ok {
@@ -122,9 +116,9 @@ func (f *HTTPForwarder) ListenerAddress() string {
 	} else {
 		parts := strings.Split(httpServer.Addr, ":")
 		if len(parts) == 2 {
-			return hostname + ":" + parts[1]
+			return f.Hostname + ":" + parts[1]
 		} else {
-			return hostname
+			return f.Hostname
 		}
 	}
 }
@@ -140,8 +134,4 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	io.Copy(w, tunn)
 
 	return nil
-}
-
-func (f HTTPForwarder) hostname() string {
-	return f.connector.User() + "." + f.config.Hostname
 }

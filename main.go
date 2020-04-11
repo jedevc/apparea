@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -41,9 +42,11 @@ func main() {
 					if err != nil {
 						return err
 					}
+					fmt.Printf("%+v\n", config)
 
 					server := &tunnel.Server{
-						Config: &config,
+						Config:   &config,
+						Hostname: "apparea.dev",
 					}
 					sessions := server.Run("0.0.0.0:2200")
 					for range sessions {

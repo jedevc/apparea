@@ -1,33 +1,21 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 )
 
 func LoadConfig() (config Config, err error) {
-	configPath := filepath.Join(configDirectory, "config.json")
-	configFile, err := os.Open(configPath)
+	config.Users, err = loadUsers()
 	if err != nil {
-		err = fmt.Errorf("Failed to load config file: %s", err)
-		return
-	}
-	defer configFile.Close()
-
-	decoder := json.NewDecoder(configFile)
-	err = decoder.Decode(&config)
-	if err != nil {
-		err = fmt.Errorf("Could not parse config file: %s", err)
 		return
 	}
 
-	config.SSHConfig, err = makeSSHServerConfig()
+	config.SSHConfig, err = makeSSHServerConfig(config.Users)
 	if err != nil {
 		return
 	}
@@ -35,22 +23,10 @@ func LoadConfig() (config Config, err error) {
 	return
 }
 
-func makeSSHServerConfig() (*ssh.ServerConfig, error) {
-	authKeyPath := filepath.Join(configDirectory, "authorized_keys")
-	authKeyBytes, err := ioutil.ReadFile(authKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
+func makeSSHServerConfig(users []User) (*ssh.ServerConfig, error) {
 	authKeys := map[string]bool{}
-	for len(authKeyBytes) > 0 {
-		pubKey, _, _, rest, err := ssh.ParseAuthorizedKey(authKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
-		authKeys[string(pubKey.Marshal())] = true
-		authKeyBytes = rest
+	for _, user := range users {
+		authKeys[user.KeyString()] = true
 	}
 
 	config := &ssh.ServerConfig{
@@ -79,4 +55,30 @@ func makeSSHServerConfig() (*ssh.ServerConfig, error) {
 	config.AddHostKey(private)
 
 	return config, nil
+}
+
+func loadUsers() ([]User, error) {
+	authKeyPath := filepath.Join(configDirectory, "authorized_keys")
+	authKeyBytes, err := ioutil.ReadFile(authKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]User, 0)
+	for len(authKeyBytes) > 0 {
+		pubKey, comment, _, rest, err := ssh.ParseAuthorizedKey(authKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println(comment)
+
+		users = append(users, User{
+			Username: comment,
+			Key:      pubKey,
+		})
+		authKeyBytes = rest
+	}
+
+	return users, nil
 }

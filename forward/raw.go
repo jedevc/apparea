@@ -8,14 +8,12 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/jedevc/AppArea/config"
 	"github.com/jedevc/AppArea/helpers"
 	"golang.org/x/crypto/ssh"
 )
 
 type RawForwarder struct {
 	Request  ForwardRequest
-	config   *config.Config
 	baseConn *ssh.ServerConn
 
 	lock     sync.Mutex
@@ -23,10 +21,9 @@ type RawForwarder struct {
 	listener net.Listener
 }
 
-func NewRawForwarder(config *config.Config, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
+func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
 	return &RawForwarder{
 		Request:  req,
-		config:   config,
 		baseConn: conn,
 	}
 }

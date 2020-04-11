@@ -20,13 +20,15 @@ func init() {
 }
 
 type Config struct {
-	Hostname string `json:"hostname"`
-
+	Users     []User
 	SSHConfig *ssh.ServerConfig `json:"-"`
 }
 
-func DefaultConfig() Config {
-	return Config{
-		Hostname: "apparea.dev",
-	}
+type User struct {
+	Username string
+	Key      ssh.PublicKey
+}
+
+func (user User) KeyString() string {
+	return string(user.Key.Marshal())
 }

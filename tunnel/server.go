@@ -13,7 +13,8 @@ import (
 )
 
 type Server struct {
-	Config *config.Config
+	Config   *config.Config
+	Hostname string
 }
 
 func (server *Server) Run(address string) <-chan *Session {
@@ -64,7 +65,7 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 	go func() {
 		for req := range reqs {
 			if req.Type == "tcpip-forward" {
-				forward, err := server.handleTCPIP(conn, req)
+				forward, err := server.handleTCPForward(conn, req)
 				if err != nil {
 					log.Printf("internal error: %s", err)
 					continue
@@ -126,7 +127,7 @@ func (server *Server) handleSessionChannel(conn *ssh.ServerConn, newChannel ssh.
 	return NewStatusView(session), nil
 }
 
-func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (forward.Forwarder, error) {
+func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (forward.Forwarder, error) {
 	fr, err := forward.ParseForwardRequest(req.Payload)
 	if err != nil {
 		if req.WantReply {
@@ -141,9 +142,10 @@ func (server *Server) handleTCPIP(conn *ssh.ServerConn, req *ssh.Request) (forwa
 
 	var fwd forward.Forwarder
 	if fr.Port == 80 {
-		fwd = forward.NewHTTPForwarder(server.Config, conn, fr)
+		hostname := conn.User() + "." + server.Hostname
+		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
 	} else {
-		fwd = forward.NewRawForwarder(server.Config, conn, fr)
+		fwd = forward.NewRawForwarder(conn, fr)
 	}
 	return fwd, nil
 }

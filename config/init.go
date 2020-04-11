@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,21 +15,6 @@ func InitializeConfigs(force bool) error {
 	}
 
 	err := os.Mkdir(configDirectory, os.ModeDir|0o700)
-	if err != nil {
-		return err
-	}
-
-	config := DefaultConfig()
-
-	configFile, err := os.Create(filepath.Join(configDirectory, "config.json"))
-	if err != nil {
-		return err
-	}
-	defer configFile.Close()
-
-	encoder := json.NewEncoder(configFile)
-	encoder.SetIndent("", "    ")
-	err = encoder.Encode(config)
 	if err != nil {
 		return err
 	}
