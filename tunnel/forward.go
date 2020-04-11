@@ -27,7 +27,8 @@ type RawForwarder struct {
 	config   *Config
 	baseConn *ssh.ServerConn
 
-	closed   bool // TODO: Needs to be atomic
+	lock     sync.Mutex
+	closed   bool
 	listener net.Listener
 }
 
@@ -66,7 +67,14 @@ func (f *RawForwarder) ListenAndServe() error {
 	f.listener = ln
 
 	go func() {
-		for !f.closed {
+		for {
+			f.lock.Lock()
+			if f.closed {
+				f.lock.Unlock()
+				break
+			}
+			f.lock.Unlock()
+
 			incoming, err := f.listener.Accept()
 			if err != nil {
 				log.Printf("Could not accept connection")
@@ -93,7 +101,6 @@ func (f *RawForwarder) ListenAndServe() error {
 				io.Copy(outgoing, incoming)
 				once.Do(closer)
 			}()
-
 		}
 	}()
 
@@ -101,10 +108,12 @@ func (f *RawForwarder) ListenAndServe() error {
 }
 
 func (f *RawForwarder) Close() {
+	f.lock.Lock()
 	f.closed = true
 	if f.listener != nil {
 		f.listener.Close()
 	}
+	f.lock.Unlock()
 }
 
 func (f *RawForwarder) ListenerAddress() string {
@@ -122,6 +131,7 @@ type HTTPForwarder struct {
 
 var httpServer *http.Server = nil
 var httpMap map[string]*HTTPForwarder
+var httpLock sync.Mutex
 
 func NewHTTPForwarder(config *Config, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
 	return &HTTPForwarder{
@@ -152,8 +162,10 @@ func (f HTTPForwarder) connect() (Tunnel, error) {
 
 func (f *HTTPForwarder) ListenAndServe() error {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		fr, ok := httpMap[host]
+		httpLock.Lock()
+		fr, ok := httpMap[r.Host]
+		httpLock.Unlock()
+
 		if !ok {
 			w.WriteHeader(404)
 			fmt.Fprintf(w, "site not found")
@@ -162,6 +174,8 @@ func (f *HTTPForwarder) ListenAndServe() error {
 
 		fr.handle(w, r)
 	}
+
+	httpLock.Lock()
 
 	if httpServer == nil {
 		httpServer = &http.Server{
@@ -177,28 +191,40 @@ func (f *HTTPForwarder) ListenAndServe() error {
 		httpMap = make(map[string]*HTTPForwarder)
 	}
 
-	hostname := f.connector.User() + "." + f.config.Hostname
+	hostname := f.hostname()
 	if _, ok := httpMap[hostname]; ok {
+		httpLock.Unlock()
 		return fmt.Errorf("site name already in use")
 	}
 
 	httpMap[hostname] = f
+
+	httpLock.Unlock()
+
 	return nil
 }
 
 func (f *HTTPForwarder) Close() {
-	hostname := f.connector.User() + "." + f.config.Hostname
+	hostname := f.hostname()
+
+	httpLock.Lock()
 	delete(httpMap, hostname)
 
 	if len(httpMap) == 0 {
 		httpServer.Close()
 		httpServer = nil
 	}
+	httpLock.Unlock()
 }
 
 func (f *HTTPForwarder) ListenerAddress() string {
-	hostname := f.connector.User() + "." + f.config.Hostname
-	if _, ok := httpMap[hostname]; !ok {
+	hostname := f.hostname()
+
+	httpLock.Lock()
+	_, ok := httpMap[hostname]
+	httpLock.Unlock()
+
+	if !ok {
 		return ""
 	} else {
 		parts := strings.Split(httpServer.Addr, ":")
@@ -221,6 +247,10 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	io.Copy(w, tunn)
 
 	return nil
+}
+
+func (f HTTPForwarder) hostname() string {
+	return f.connector.User() + "." + f.config.Hostname
 }
 
 type ForwardRequest struct {
