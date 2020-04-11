@@ -58,6 +58,9 @@ func (f *RawForwarder) ListenAndServe() error {
 	}
 	f.listener = ln
 
+	// reconfigure request port (only changes in the case that port=0)
+	f.Request.Port = f.ListenerPort()
+
 	go func() {
 		for {
 			f.lock.Lock()
@@ -69,6 +72,10 @@ func (f *RawForwarder) ListenAndServe() error {
 
 			incoming, err := f.listener.Accept()
 			if err != nil {
+				if f.closed {
+					break
+				}
+
 				log.Printf("Could not accept connection")
 				continue
 			}
@@ -119,4 +126,13 @@ func (f *RawForwarder) ListenerAddress() string {
 	}
 
 	return fmt.Sprintf("%s:%d", f.Hostname, addr.Port)
+}
+
+func (f *RawForwarder) ListenerPort() uint32 {
+	addr, ok := f.listener.Addr().(*net.TCPAddr)
+	if !ok {
+		panic("Internal error: cannot convert to TCPAddr")
+	}
+
+	return uint32(addr.Port)
 }

@@ -123,6 +123,16 @@ func (f *HTTPForwarder) ListenerAddress() string {
 	}
 }
 
+func (f *HTTPForwarder) ListenerPort() uint32 {
+	parts := strings.Split(httpServer.Addr, ":")
+	if len(parts) == 2 {
+		port, _ := strconv.Atoi(parts[1])
+		return uint32(port)
+	} else {
+		return 80
+	}
+}
+
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	// TODO: reuse connections if possible?
 	tunn, err := f.connect()

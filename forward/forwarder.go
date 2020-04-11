@@ -5,4 +5,5 @@ type Forwarder interface {
 	Close()
 
 	ListenerAddress() string
+	ListenerPort() uint32
 }

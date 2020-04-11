@@ -147,6 +147,14 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 
 		hostname := server.generateHost(user, parts)
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
+
+		err := fwd.ListenAndServe()
+		if err != nil {
+			req.Reply(false, nil)
+			return nil, err
+		}
+
+		req.Reply(true, nil)
 	case 0:
 		user, parts, ok := server.Config.Users.LookupUser(conn.User())
 		if !ok {
@@ -155,17 +163,20 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 
 		hostname := server.generateHost(user, parts)
 		fwd = forward.NewRawForwarder(hostname, conn, fr)
-	default:
-		bs := make([]byte, 0)
-		helpers.PackInt(&bs, fr.Port)
-		req.Reply(false, bs)
 
+		err := fwd.ListenAndServe()
+		if err != nil {
+			req.Reply(false, nil)
+			return nil, err
+		}
+
+		bs := make([]byte, 0)
+		helpers.PackInt(&bs, fwd.ListenerPort())
+		req.Reply(true, bs)
+	default:
+		req.Reply(false, nil)
 		return nil, fmt.Errorf("Forward request invalid port")
 	}
-
-	bs := make([]byte, 0)
-	helpers.PackInt(&bs, fr.Port)
-	req.Reply(true, bs)
 
 	return fwd, nil
 }

@@ -3,8 +3,6 @@ package tunnel
 import (
 	"sync"
 
-	"log"
-
 	"github.com/jedevc/AppArea/forward"
 )
 
@@ -87,12 +85,6 @@ func (session *Session) handleView(view View) {
 }
 
 func (session *Session) handleForwarder(forward forward.Forwarder) {
-	err := forward.ListenAndServe()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
 	session.lock.Lock()
 	session.forwards = append(session.forwards, forward)
 	session.lock.Unlock()
