@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/jedevc/AppArea/config"
-	"github.com/jedevc/AppArea/tunnel"
+	"github.com/jedevc/apparea/config"
+	"github.com/jedevc/apparea/tunnel"
 	"github.com/urfave/cli/v2"
 )
 

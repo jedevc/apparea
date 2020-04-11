@@ -3,7 +3,7 @@ package tunnel
 import (
 	"sync"
 
-	"github.com/jedevc/AppArea/forward"
+	"github.com/jedevc/apparea/forward"
 )
 
 type Session struct {

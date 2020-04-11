@@ -1,8 +1,8 @@
-module github.com/jedevc/AppArea
+module github.com/jedevc/apparea
 
-go 1.13
+go 1.14
 
 require (
-	github.com/urfave/cli/v2 v2.0.1-0.20191208081217-42b931bfe711
-	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e
+	github.com/urfave/cli/v2 v2.2.0
+	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71
 )

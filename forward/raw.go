@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/jedevc/AppArea/helpers"
+	"github.com/jedevc/apparea/helpers"
 	"golang.org/x/crypto/ssh"
 )
 

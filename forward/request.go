@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/jedevc/AppArea/helpers"
+	"github.com/jedevc/apparea/helpers"
 )
 
 type ForwardRequest struct {
