@@ -5,12 +5,14 @@ import (
 	"os"
 
 	"github.com/jedevc/apparea/config"
+	"github.com/jedevc/apparea/forward"
 	"github.com/jedevc/apparea/tunnel"
 	"github.com/urfave/cli/v2"
 )
 
 const defaultHostname = "apparea.dev"
-const defaultBindAddress = ":2222"
+const defaultSSHAddress = ":2200"
+const defaultHTTPAddress = ":8000"
 
 func main() {
 	app := &cli.App{
@@ -41,9 +43,14 @@ func main() {
 				Usage: "run the server",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "bind",
+						Name:        "bind-ssh",
 						Usage:       "address to bind to",
-						DefaultText: defaultBindAddress,
+						DefaultText: defaultSSHAddress,
+					},
+					&cli.StringFlag{
+						Name:        "bind-http",
+						Usage:       "address to bind to",
+						DefaultText: defaultHTTPAddress,
 					},
 					&cli.StringFlag{
 						Name:        "hostname",
@@ -52,8 +59,14 @@ func main() {
 					},
 				},
 				Action: func(c *cli.Context) error {
-					if len(c.String("bind")) == 0 {
-						err := c.Set("bind", defaultBindAddress)
+					if len(c.String("bind-ssh")) == 0 {
+						err := c.Set("bind-ssh", defaultSSHAddress)
+						if err != nil {
+							panic(err)
+						}
+					}
+					if len(c.String("bind-http")) == 0 {
+						err := c.Set("bind-http", defaultHTTPAddress)
 						if err != nil {
 							panic(err)
 						}
@@ -70,11 +83,13 @@ func main() {
 						return err
 					}
 
+					forward.ServeHTTP()
+
 					server := &tunnel.Server{
 						Config:   &config,
 						Hostname: c.String("hostname"),
 					}
-					sessions := server.Run(c.String("bind"))
+					sessions := server.Run(c.String("bind-ssh"))
 					for range sessions {
 					}
 

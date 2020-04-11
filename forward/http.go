@@ -21,27 +21,25 @@ type HTTPForwarder struct {
 	connector *ssh.ServerConn
 }
 
-var httpServer *http.Server = nil
-var httpMap map[string]*HTTPForwarder
+var httpMap = make(map[string]*HTTPForwarder)
 var httpLock sync.Mutex
+var httpServer *http.Server
 
-func init() {
-	httpMap = make(map[string]*HTTPForwarder)
+func handler(w http.ResponseWriter, r *http.Request) {
+	httpLock.Lock()
+	fr, ok := httpMap[r.Host]
+	httpLock.Unlock()
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		httpLock.Lock()
-		fr, ok := httpMap[r.Host]
-		httpLock.Unlock()
-
-		if !ok {
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "site not found")
-			return
-		}
-
-		fr.handle(w, r)
+	if !ok {
+		w.WriteHeader(404)
+		fmt.Fprintf(w, "site not found")
+		return
 	}
 
+	fr.handle(w, r)
+}
+
+func ServeHTTP() {
 	httpServer = &http.Server{
 		Addr:           ":8080",
 		Handler:        http.HandlerFunc(handler),
@@ -49,6 +47,7 @@ func init() {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+
 	// TODO: check for errors on listening
 	go httpServer.ListenAndServe()
 }
