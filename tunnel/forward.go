@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jedevc/AppArea/config"
 	"github.com/jedevc/AppArea/helpers"
 	"golang.org/x/crypto/ssh"
 )
@@ -24,7 +25,7 @@ type Forwarder interface {
 
 type RawForwarder struct {
 	Request  ForwardRequest
-	config   *Config
+	config   *config.Config
 	baseConn *ssh.ServerConn
 
 	lock     sync.Mutex
@@ -32,7 +33,7 @@ type RawForwarder struct {
 	listener net.Listener
 }
 
-func NewRawForwarder(config *Config, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
+func NewRawForwarder(config *config.Config, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
 	return &RawForwarder{
 		Request:  req,
 		config:   config,
@@ -125,7 +126,7 @@ func (f *RawForwarder) ListenerAddress() string {
 
 type HTTPForwarder struct {
 	Request   ForwardRequest
-	config    *Config
+	config    *config.Config
 	connector *ssh.ServerConn
 }
 
@@ -133,7 +134,7 @@ var httpServer *http.Server = nil
 var httpMap map[string]*HTTPForwarder
 var httpLock sync.Mutex
 
-func NewHTTPForwarder(config *Config, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
+func NewHTTPForwarder(config *config.Config, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
 	return &HTTPForwarder{
 		Request:   req,
 		config:    config,

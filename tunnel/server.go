@@ -6,12 +6,13 @@ import (
 	"net"
 	"sync"
 
+	"github.com/jedevc/AppArea/config"
 	"github.com/jedevc/AppArea/helpers"
 	"golang.org/x/crypto/ssh"
 )
 
 type Server struct {
-	Config *Config
+	Config *config.Config
 }
 
 func (server *Server) Run(address string) <-chan *Session {

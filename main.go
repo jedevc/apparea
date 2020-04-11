@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/jedevc/AppArea/config"
 	"github.com/jedevc/AppArea/tunnel"
 	"github.com/urfave/cli/v2"
 )
@@ -24,7 +25,7 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
-					err := tunnel.InitializeConfigs(force)
+					err := config.InitializeConfigs(force)
 					if err != nil {
 						return err
 					}
@@ -36,7 +37,7 @@ func main() {
 				Name:  "run",
 				Usage: "run the server",
 				Action: func(c *cli.Context) error {
-					config, err := tunnel.LoadConfig()
+					config, err := config.LoadConfig()
 					if err != nil {
 						return err
 					}
