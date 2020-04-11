@@ -10,6 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const defaultHostname = "apparea.dev"
+const defaultBindAddress = ":2222"
+
 func main() {
 	app := &cli.App{
 		Name:  "apparea",
@@ -35,9 +38,34 @@ func main() {
 				},
 			},
 			{
-				Name:  "run",
+				Name:  "serve",
 				Usage: "run the server",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "bind",
+						Usage:       "address to bind to",
+						DefaultText: defaultBindAddress,
+					},
+					&cli.StringFlag{
+						Name:        "hostname",
+						Usage:       "hostname of the server",
+						DefaultText: defaultHostname,
+					},
+				},
 				Action: func(c *cli.Context) error {
+					if len(c.String("bind")) == 0 {
+						err := c.Set("bind", defaultBindAddress)
+						if err != nil {
+							panic(err)
+						}
+					}
+					if len(c.String("hostname")) == 0 {
+						err := c.Set("hostname", defaultHostname)
+						if err != nil {
+							panic(err)
+						}
+					}
+
 					config, err := config.LoadConfig()
 					if err != nil {
 						return err
@@ -46,9 +74,9 @@ func main() {
 
 					server := &tunnel.Server{
 						Config:   &config,
-						Hostname: "apparea.dev",
+						Hostname: c.String("hostname"),
 					}
-					sessions := server.Run("0.0.0.0:2200")
+					sessions := server.Run(c.String("bind"))
 					for range sessions {
 					}
 
