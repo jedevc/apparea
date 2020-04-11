@@ -25,6 +25,34 @@ var httpServer *http.Server = nil
 var httpMap map[string]*HTTPForwarder
 var httpLock sync.Mutex
 
+func init() {
+	httpMap = make(map[string]*HTTPForwarder)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		httpLock.Lock()
+		fr, ok := httpMap[r.Host]
+		httpLock.Unlock()
+
+		if !ok {
+			w.WriteHeader(404)
+			fmt.Fprintf(w, "site not found")
+			return
+		}
+
+		fr.handle(w, r)
+	}
+
+	httpServer = &http.Server{
+		Addr:           ":8080",
+		Handler:        http.HandlerFunc(handler),
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	// TODO: check for errors on listening
+	go httpServer.ListenAndServe()
+}
+
 func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
 	return &HTTPForwarder{
 		Request:   req,
@@ -54,43 +82,12 @@ func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
 }
 
 func (f *HTTPForwarder) ListenAndServe() error {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		httpLock.Lock()
-		fr, ok := httpMap[r.Host]
-		httpLock.Unlock()
-
-		if !ok {
-			w.WriteHeader(404)
-			fmt.Fprintf(w, "site not found")
-			return
-		}
-
-		fr.handle(w, r)
-	}
-
 	httpLock.Lock()
-
-	if httpServer == nil {
-		httpServer = &http.Server{
-			Addr:           ":8080",
-			Handler:        http.HandlerFunc(handler),
-			ReadTimeout:    10 * time.Second,
-			WriteTimeout:   10 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-		}
-		// TODO: check for errors on listening
-		go httpServer.ListenAndServe()
-
-		httpMap = make(map[string]*HTTPForwarder)
-	}
-
 	if _, ok := httpMap[f.Hostname]; ok {
 		httpLock.Unlock()
 		return fmt.Errorf("site name already in use")
 	}
-
 	httpMap[f.Hostname] = f
-
 	httpLock.Unlock()
 
 	return nil
@@ -99,11 +96,6 @@ func (f *HTTPForwarder) ListenAndServe() error {
 func (f *HTTPForwarder) Close() {
 	httpLock.Lock()
 	delete(httpMap, f.Hostname)
-
-	if len(httpMap) == 0 {
-		httpServer.Close()
-		httpServer = nil
-	}
 	httpLock.Unlock()
 }
 
