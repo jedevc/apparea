@@ -15,8 +15,9 @@ import (
 )
 
 type HTTPForwarder struct {
-	Request   ForwardRequest
-	Hostname  string
+	Request  ForwardRequest
+	Hostname string
+
 	connector *ssh.ServerConn
 }
 
@@ -110,16 +111,15 @@ func (f *HTTPForwarder) ListenerAddress() string {
 	httpLock.Lock()
 	_, ok := httpMap[f.Hostname]
 	httpLock.Unlock()
-
 	if !ok {
 		return ""
+	}
+
+	parts := strings.Split(httpServer.Addr, ":")
+	if len(parts) == 2 {
+		return f.Hostname + ":" + parts[1]
 	} else {
-		parts := strings.Split(httpServer.Addr, ":")
-		if len(parts) == 2 {
-			return f.Hostname + ":" + parts[1]
-		} else {
-			return f.Hostname
-		}
+		return f.Hostname
 	}
 }
 

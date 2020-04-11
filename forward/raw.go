@@ -14,6 +14,8 @@ import (
 
 type RawForwarder struct {
 	Request  ForwardRequest
+	Hostname string
+
 	baseConn *ssh.ServerConn
 
 	lock     sync.Mutex
@@ -21,9 +23,10 @@ type RawForwarder struct {
 	listener net.Listener
 }
 
-func NewRawForwarder(conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
+func NewRawForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
 	return &RawForwarder{
 		Request:  req,
+		Hostname: hostname,
 		baseConn: conn,
 	}
 }
@@ -109,5 +112,11 @@ func (f *RawForwarder) ListenerAddress() string {
 	if f.listener == nil {
 		return ""
 	}
-	return f.listener.Addr().String()
+
+	addr, ok := f.listener.Addr().(*net.TCPAddr)
+	if !ok {
+		panic("Internal error: cannot convert to TCPAddr")
+	}
+
+	return fmt.Sprintf("%s:%d", f.Hostname, addr.Port)
 }

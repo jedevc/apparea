@@ -145,15 +145,16 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 			panic("Internal error: user should exist")
 		}
 
-		var hostname string
-		if len(parts) == 0 {
-			hostname = fmt.Sprintf("%s.%s", user.Username, server.Hostname)
-		} else {
-			hostname = fmt.Sprintf("%s.%s.%s", strings.Join(parts, "."), user.Username, server.Hostname)
-		}
+		hostname := server.generateHost(user, parts)
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
 	case 0:
-		fwd = forward.NewRawForwarder(conn, fr)
+		user, parts, ok := server.Config.Users.LookupUser(conn.User())
+		if !ok {
+			panic("Internal error: user should exist")
+		}
+
+		hostname := server.generateHost(user, parts)
+		fwd = forward.NewRawForwarder(hostname, conn, fr)
 	default:
 		bs := make([]byte, 0)
 		helpers.PackInt(&bs, fr.Port)
@@ -167,4 +168,12 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 	req.Reply(true, bs)
 
 	return fwd, nil
+}
+
+func (server Server) generateHost(user config.User, parts []string) string {
+	if len(parts) == 0 {
+		return fmt.Sprintf("%s.%s", user.Username, server.Hostname)
+	} else {
+		return fmt.Sprintf("%s.%s.%s", strings.Join(parts, "."), user.Username, server.Hostname)
+	}
 }

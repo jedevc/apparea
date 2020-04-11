@@ -80,9 +80,6 @@ func (session *Session) Close() {
 func (session *Session) handleView(view View) {
 	session.lock.Lock()
 	session.views = append(session.views, view)
-	for _, forward := range session.forwards {
-		view.Write([]byte("Listening on " + forward.ListenerAddress()))
-	}
 	for _, message := range session.messages {
 		view.Write(message)
 	}
