@@ -68,7 +68,7 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 			if req.Type == "tcpip-forward" {
 				forward, err := server.handleTCPForward(conn, req)
 				if err != nil {
-					log.Printf("internal error: %s", err)
+					session.Broadcast([]byte(fmt.Sprintf("Could not establish forwarding: %s", err)))
 					continue
 				}
 				forwards <- forward
@@ -137,12 +137,9 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 		return nil, err
 	}
 
-	bs := make([]byte, 0)
-	helpers.PackInt(&bs, fr.Port)
-	req.Reply(true, bs)
-
 	var fwd forward.Forwarder
-	if fr.Port == 80 {
+	switch fr.Port {
+	case 80:
 		user, parts, ok := server.Config.Users.LookupUser(conn.User())
 		if !ok {
 			panic("Internal error: user should exist")
@@ -155,8 +152,19 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 			hostname = fmt.Sprintf("%s.%s.%s", strings.Join(parts, "."), user.Username, server.Hostname)
 		}
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
-	} else {
+	case 0:
 		fwd = forward.NewRawForwarder(conn, fr)
+	default:
+		bs := make([]byte, 0)
+		helpers.PackInt(&bs, fr.Port)
+		req.Reply(false, bs)
+
+		return nil, fmt.Errorf("Forward request invalid port")
 	}
+
+	bs := make([]byte, 0)
+	helpers.PackInt(&bs, fr.Port)
+	req.Reply(true, bs)
+
 	return fwd, nil
 }

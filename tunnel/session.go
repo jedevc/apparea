@@ -12,13 +12,16 @@ type Session struct {
 	views    []View
 	forwards []forward.Forwarder
 
+	messages [][]byte
+
 	lock *sync.Mutex
 }
 
 func NewSession(views chan View, forwards chan forward.Forwarder) *Session {
 	session := Session{
-		views: []View{},
-		lock:  new(sync.Mutex),
+		views:    []View{},
+		lock:     new(sync.Mutex),
+		messages: make([][]byte, 0),
 	}
 
 	var once sync.Once
@@ -50,6 +53,8 @@ func NewSession(views chan View, forwards chan forward.Forwarder) *Session {
 }
 
 func (session *Session) Broadcast(msg []byte) (err error) {
+	session.messages = append(session.messages, msg)
+
 	session.lock.Lock()
 	for _, view := range session.views {
 		_, err = view.Write(msg)
@@ -77,6 +82,9 @@ func (session *Session) handleView(view View) {
 	session.views = append(session.views, view)
 	for _, forward := range session.forwards {
 		view.Write([]byte("Listening on " + forward.ListenerAddress()))
+	}
+	for _, message := range session.messages {
+		view.Write(message)
 	}
 	session.lock.Unlock()
 }

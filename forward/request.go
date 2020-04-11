@@ -28,7 +28,7 @@ func ParseForwardRequest(payload []byte) (ForwardRequest, error) {
 	req.Port = port
 
 	if len(payload) != 0 {
-		return req, fmt.Errorf("forward request parse error: unknown excess data")
+		return req, fmt.Errorf("Forward request parse error: Unknown excess data")
 	}
 
 	return req, nil
