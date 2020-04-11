@@ -15,43 +15,12 @@ func LoadConfig() (config Config, err error) {
 		return
 	}
 
-	err = config.makeSSHServerConfig()
+	config.SSHConfig, err = makeSSHServerConfig(config.Users)
 	if err != nil {
 		return
 	}
 
 	return
-}
-
-func (config *Config) makeSSHServerConfig() error {
-	sshConfig := &ssh.ServerConfig{
-		PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			user, _, ok := config.LookupUser(c.User())
-			if ok && user.CheckKey(key) {
-				return &ssh.Permissions{
-					Extensions: map[string]string{
-						"pubkey-fp": ssh.FingerprintSHA256(key),
-					},
-				}, nil
-			}
-			return nil, fmt.Errorf("Invalid credentials")
-		},
-	}
-
-	privateBytes, err := ioutil.ReadFile(filepath.Join(configDirectory, "id_rsa"))
-	if err != nil {
-		log.Fatalf("Could not load server private key: %s", err)
-	}
-
-	private, err := ssh.ParsePrivateKey(privateBytes)
-	if err != nil {
-		log.Fatalf("Could not parse server private key: %s", err)
-	}
-
-	sshConfig.AddHostKey(private)
-
-	config.SSHConfig = sshConfig
-	return nil
 }
 
 func loadUsers() (map[string]User, error) {
@@ -86,4 +55,34 @@ func loadUsers() (map[string]User, error) {
 	}
 
 	return users, nil
+}
+
+func makeSSHServerConfig(users Users) (*ssh.ServerConfig, error) {
+	sshConfig := &ssh.ServerConfig{
+		PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+			user, _, ok := users.LookupUser(c.User())
+			if ok && user.CheckKey(key) {
+				return &ssh.Permissions{
+					Extensions: map[string]string{
+						"pubkey-fp": ssh.FingerprintSHA256(key),
+					},
+				}, nil
+			}
+			return nil, fmt.Errorf("Invalid credentials")
+		},
+	}
+
+	privateBytes, err := ioutil.ReadFile(filepath.Join(configDirectory, "id_rsa"))
+	if err != nil {
+		log.Fatalf("Could not load server private key: %s", err)
+	}
+
+	private, err := ssh.ParsePrivateKey(privateBytes)
+	if err != nil {
+		log.Fatalf("Could not parse server private key: %s", err)
+	}
+
+	sshConfig.AddHostKey(private)
+
+	return sshConfig, nil
 }

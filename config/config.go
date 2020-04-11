@@ -25,11 +25,13 @@ func init() {
 }
 
 type Config struct {
-	Users     map[string]User
+	Users     Users
 	SSHConfig *ssh.ServerConfig `json:"-"`
 }
 
-func (config Config) LookupUser(username string) (User, []string, bool) {
+type Users map[string]User
+
+func (users Users) LookupUser(username string) (User, []string, bool) {
 	if !IsValidUsername(username) {
 		return User{}, nil, false
 	}
@@ -39,7 +41,7 @@ func (config Config) LookupUser(username string) (User, []string, bool) {
 		return User{}, nil, false
 	}
 
-	user, ok := config.Users[userParts[0]]
+	user, ok := users[userParts[0]]
 	if !ok {
 		return User{}, nil, false
 	}

@@ -143,7 +143,7 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 
 	var fwd forward.Forwarder
 	if fr.Port == 80 {
-		user, parts, ok := server.Config.LookupUser(conn.User())
+		user, parts, ok := server.Config.Users.LookupUser(conn.User())
 		if !ok {
 			panic("Internal error: user should exist")
 		}
