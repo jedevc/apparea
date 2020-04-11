@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"log"
 	"os/user"
 	"path/filepath"
@@ -20,15 +21,23 @@ func init() {
 }
 
 type Config struct {
-	Users     []User
+	Users     map[string]User
 	SSHConfig *ssh.ServerConfig `json:"-"`
 }
 
 type User struct {
 	Username string
-	Key      ssh.PublicKey
+	Keys     []ssh.PublicKey
 }
 
-func (user User) KeyString() string {
-	return string(user.Key.Marshal())
+func (user User) CheckKey(target ssh.PublicKey) bool {
+	targetBytes := target.Marshal()
+	for _, key := range user.Keys {
+		keyBytes := key.Marshal()
+		if bytes.Equal(targetBytes, keyBytes) {
+			return true
+		}
+	}
+
+	return false
 }

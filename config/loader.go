@@ -23,22 +23,18 @@ func LoadConfig() (config Config, err error) {
 	return
 }
 
-func makeSSHServerConfig(users []User) (*ssh.ServerConfig, error) {
-	authKeys := map[string]bool{}
-	for _, user := range users {
-		authKeys[user.KeyString()] = true
-	}
-
+func makeSSHServerConfig(users map[string]User) (*ssh.ServerConfig, error) {
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			if authKeys[string(key.Marshal())] {
+			user, ok := users[c.User()]
+			if ok && user.CheckKey(key) {
 				return &ssh.Permissions{
 					Extensions: map[string]string{
 						"pubkey-fp": ssh.FingerprintSHA256(key),
 					},
 				}, nil
 			}
-			return nil, fmt.Errorf("Unknown key provided")
+			return nil, fmt.Errorf("Invalid credentials")
 		},
 	}
 
@@ -57,14 +53,14 @@ func makeSSHServerConfig(users []User) (*ssh.ServerConfig, error) {
 	return config, nil
 }
 
-func loadUsers() ([]User, error) {
+func loadUsers() (map[string]User, error) {
 	authKeyPath := filepath.Join(configDirectory, "authorized_keys")
 	authKeyBytes, err := ioutil.ReadFile(authKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	users := make([]User, 0)
+	users := make(map[string]User)
 	for len(authKeyBytes) > 0 {
 		pubKey, comment, _, rest, err := ssh.ParseAuthorizedKey(authKeyBytes)
 		if err != nil {
@@ -73,10 +69,18 @@ func loadUsers() ([]User, error) {
 
 		fmt.Println(comment)
 
-		users = append(users, User{
-			Username: comment,
-			Key:      pubKey,
-		})
+		user, ok := users[comment]
+		if !ok {
+			users[comment] = User{
+				Username: comment,
+			}
+			user = users[comment]
+		}
+
+		users[comment] = User{
+			Username: user.Username,
+			Keys:     append(user.Keys, pubKey),
+		}
 		authKeyBytes = rest
 	}
 
