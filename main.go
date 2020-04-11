@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -70,7 +69,6 @@ func main() {
 					if err != nil {
 						return err
 					}
-					fmt.Printf("%+v\n", config)
 
 					server := &tunnel.Server{
 						Config:   &config,

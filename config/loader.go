@@ -37,8 +37,6 @@ func loadUsers() (map[string]User, error) {
 			return nil, err
 		}
 
-		fmt.Println(comment)
-
 		user, ok := users[comment]
 		if !ok {
 			users[comment] = User{
