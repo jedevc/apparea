@@ -7,13 +7,6 @@ import (
 	"github.com/jedevc/AppArea/helpers"
 )
 
-type Forwarder interface {
-	ListenAndServe() error
-	Close()
-
-	ListenerAddress() string
-}
-
 type ForwardRequest struct {
 	Host string
 	Port uint32
