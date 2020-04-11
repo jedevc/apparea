@@ -1,0 +1,55 @@
+#cloud-config
+
+packages:
+  - git
+  - nginx
+  - golang-go
+
+apt:
+  sources:
+    golang-backports:
+      source: "ppa:longsleep/golang-backports"
+
+write_files:
+  - path: /etc/systemd/system/apparea.service
+    owner: root:root
+    permissions: '0755'
+    content: |
+      [Unit]
+      Description=AppArea
+      After=network.target
+
+      [Service]
+      Type=forking
+      ExecStart=/usr/local/bin/apparea serve --bind 0.0.0.0:21
+      Restart=always
+      RestartSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+  - content: |
+      server {
+          server_name apparea.dev;
+          client_max_body_size 2m;
+
+          location / {
+              proxy_pass http://localhost:8080;
+          }
+      }
+    owner: "root:root"
+    path: "/etc/nginx/sites-available/default"
+  - content: |
+      auto eth0:1
+      iface eth0:1 inet static
+          address ${ip_address}
+          netmask 32
+    owner: "root:root"
+    path: "/etc/network/interfaces.d/60-my-floating-ip.cfg"
+
+runcmd:
+  - "service networking restart"
+  - "HOME=/root GOPATH=/root/go go get github.com/jedevc/apparea"
+  - "HOME=/root GOPATH=/root/go go install github.com/jedevc/apparea"
+  - "cp /root/go/bin/apparea /usr/local/bin"
+  - "apparea setup"
+  - "systemctl start apparea.service"
