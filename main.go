@@ -83,7 +83,12 @@ func main() {
 						return err
 					}
 
-					forward.ServeHTTP()
+					go func() {
+						err := forward.ServeHTTP(c.String("bind-http"))
+						if err != nil {
+							log.Printf("http server error: %s", err)
+						}
+					}()
 
 					server := &tunnel.Server{
 						Config:   &config,

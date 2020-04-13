@@ -39,17 +39,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fr.handle(w, r)
 }
 
-func ServeHTTP() {
+func ServeHTTP(address string) error {
 	httpServer = &http.Server{
-		Addr:           ":8080",
+		Addr:           address,
 		Handler:        http.HandlerFunc(handler),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	// TODO: check for errors on listening
-	go httpServer.ListenAndServe()
+	return httpServer.ListenAndServe()
 }
 
 func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) *HTTPForwarder {
@@ -60,7 +59,6 @@ func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest)
 	}
 }
 
-// FIXME: type here
 func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
 	remoteAddress, remotePortStr, _ := net.SplitHostPort(f.connector.RemoteAddr().String())
 	remotePort, _ := strconv.Atoi(remotePortStr)
@@ -113,7 +111,6 @@ func (f *HTTPForwarder) ListenerPort() uint32 {
 }
 
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
-	// TODO: reuse connections if possible?
 	tunn, err := f.connect()
 	if err != nil {
 		return nil

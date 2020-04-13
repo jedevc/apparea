@@ -31,7 +31,6 @@ func NewRawForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) 
 	}
 }
 
-// FIXME: type here is not right
 func (f RawForwarder) connect() (io.ReadWriteCloser, error) {
 	remoteAddress, remotePortStr, _ := net.SplitHostPort(f.baseConn.RemoteAddr().String())
 	remotePort, _ := strconv.Atoi(remotePortStr)
