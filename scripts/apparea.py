@@ -19,16 +19,16 @@ KEY_FILE = None
 def main():
     configure()
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", "-v", action="store_true")
+    parser = argparse.ArgumentParser(description="Client helper script to forward ports using AppArea")
+    parser.add_argument("--verbose", "-v", action="store_true", help="enable verbose output")
     subparsers = parser.add_subparsers()
 
-    http_parser = subparsers.add_parser("http")
-    http_parser.add_argument("port", type=int)
+    http_parser = subparsers.add_parser("http", help="proxy a http port")
+    http_parser.add_argument("port", type=int, help="target port to proxy")
     http_parser.set_defaults(func=http)
     
-    tcp_parser = subparsers.add_parser("tcp")
-    tcp_parser.add_argument("ports", nargs="+", type=int)
+    tcp_parser = subparsers.add_parser("tcp", help="proxy a raw tcp port")
+    tcp_parser.add_argument("ports", nargs="+", type=int, help="target ports to proxy")
     tcp_parser.set_defaults(func=tcp)
 
     args = parser.parse_args()
