@@ -99,19 +99,7 @@ func (f *HTTPForwarder) Close() {
 }
 
 func (f *HTTPForwarder) ListenerAddress() string {
-	httpLock.Lock()
-	_, ok := httpMap[f.Hostname]
-	httpLock.Unlock()
-	if !ok {
-		return ""
-	}
-
-	parts := strings.Split(httpServer.Addr, ":")
-	if len(parts) == 2 {
-		return f.Hostname + ":" + parts[1]
-	} else {
-		return f.Hostname
-	}
+	return "http://" + f.Hostname
 }
 
 func (f *HTTPForwarder) ListenerPort() uint32 {
