@@ -2,12 +2,13 @@
 # Wrapper for apparea.
 
 import argparse
-import json
 import getpass
 import glob
-import os
+import json
 import subprocess
 import sys
+import time
+import os
 
 CONFIG_FILE = os.path.expanduser("~/.apparea.json")
 
@@ -38,6 +39,25 @@ def main():
     else:
         parser.print_usage()
 
+def exponential_backoff(f):
+    def wrapper(*args, **kwargs):
+        delay = 1
+        while True:
+            start = time.time()
+            f(*args, **kwargs)
+            end = time.time()
+
+            if end - start > 2:
+                # HACK: assume that if the process was running for longer than
+                # 2 seconds, it successfully established a connection
+                delay = 1
+
+            time.sleep(delay)
+            delay *= 2
+            if delay > 60:
+                delay = 60
+    return wrapper
+
 def http(args):
     forwards = ["-R", f"0.0.0.0:80:localhost:{args.port}"]
     command = [*forwards, "-p", str(PORT), f"{USERNAME}@{SITE}"]
@@ -55,6 +75,7 @@ def tcp(args):
 
     run_ssh(command)
 
+@exponential_backoff
 def run_ssh(args):
     proc = subprocess.Popen(
             ["ssh", *args],
