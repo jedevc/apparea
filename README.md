@@ -70,7 +70,7 @@ section.
 Deployment of the server can be tricky.
 
 Setup on <apparea.dev> uses an nginx instance in front of a version of
-apparea which is bound to localhost:8080 for http, and uses `cap_net_raw+ep`
-for listening on 0.0.0.0:21 for ssh.
+apparea which is bound to localhost:8080 for http, and uses
+`CAP_NET_BIND_SERVICE+ep` for listening on 0.0.0.0:21 for ssh.
 
 You can see the configs for how the setup is done exactly in `deploy/`.
