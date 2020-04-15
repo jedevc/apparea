@@ -8,15 +8,28 @@ packages:
   - git
   - nginx
   - golang-go
+  - python3
+  - python3-pip
+  - software-properties-common
+  - certbot
 
 apt:
   sources:
     golang-backports:
       source: "ppa:longsleep/golang-backports"
+    certbot:
+      source: "ppa:certbot/certbot"
 
 write_files:
+  - owner: "root:root"
+    path: /etc/network/interfaces.d/60-my-floating-ip.cfg
+    content: |
+      auto eth0:1
+      iface eth0:1 inet static
+          address ${ip_address}
+          netmask 32
   - path: /etc/systemd/system/apparea.service
-    owner: root:root
+    owner: "root:root"
     content: |
       [Unit]
       Description=AppArea
@@ -32,17 +45,25 @@ write_files:
 
       [Install]
       WantedBy=multi-user.target
-  - content: |
+  - path: /root/gandi.ini
+    owner: "root:root"
+    permissions: "0600"
+    content: |
+      certbot_plugin_gandi:dns_api_key=${gandi_api_key}
+  - path: /etc/nginx/sites-available/default
+    owner: "root:root"
+    content: |
       server {
         server_name apparea.dev;
         client_max_body_size 2m;
 
         listen 80;
+        listen [::]:80;
         listen 443 ssl http2;
         listen [::]:443 ssl http2;
 
-        ssl_certificate_key /etc/certs/apparea.pem;
-        ssl_certificate /etc/certs/apparea.crt;
+        ssl_certificate_key /etc/letsencrypt/live/apparea.dev/privkey.pem;
+        ssl_certificate /etc/letsencrypt/live/apparea.dev/cert.pem;
         ssl_session_timeout 1d;
         ssl_session_cache shared:MozSSL:10m;
         ssl_session_tickets off;
@@ -56,26 +77,17 @@ write_files:
           proxy_set_header Host $host;
         }
       }
-    owner: "root:root"
-    path: "/etc/nginx/sites-available/default"
-  - content: "${base64encode(tls_cert)}"
-    encoding: b64
-    owner: "root:root"
-    path: "/etc/certs/apparea.crt"
-  - content: "${base64encode(tls_key)}"
-    encoding: b64
-    owner: "root:root"
-    path: "/etc/certs/apparea.pem"
-  - content: |
-      auto eth0:1
-      iface eth0:1 inet static
-          address ${ip_address}
-          netmask 32
-    owner: "root:root"
-    path: "/etc/network/interfaces.d/60-my-floating-ip.cfg"
 
 runcmd:
   - "service networking restart"
+  - "pip3 install certbot-plugin-gandi"
+  - "certbot certonly -n \
+        --email jedevc@gmail.com --agree-tos
+        -a certbot-plugin-gandi:dns \
+        --certbot-plugin-gandi:dns-credentials /root/gandi.ini \
+        -d 'apparea.dev' -d '*.apparea.dev' \
+        --server https://acme-staging-v02.api.letsencrypt.org/directory"
+  - "systemctl restart nginx.service"
   - "HOME=/home/runner GOPATH=/home/runner/go go get github.com/jedevc/apparea"
   - "HOME=/home/runner GOPATH=/home/runner/go go install github.com/jedevc/apparea"
   - "cp /home/runner/go/bin/apparea /usr/local/bin"

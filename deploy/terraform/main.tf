@@ -14,17 +14,12 @@ provider "gandi" {
   key = var.gandi_key
 }
 
-provider "acme" {
-  server_url = "https://acme-staging-v02.api.letsencrypt.org/directory"
-}
-
 data "template_file" "cloudinit" {
   template = file("${path.module}/cloud-config.yml")
 
   vars = {
     ip_address = hcloud_floating_ip.master.ip_address
-    tls_cert = acme_certificate.certificate.certificate_pem
-    tls_key = acme_certificate.certificate.private_key_pem
+    gandi_api_key = var.gandi_key
   }
 }
 
@@ -66,24 +61,12 @@ resource "gandi_livedns_record" "apparea_record" {
   ]
 }
 
-resource "tls_private_key" "private_key" {
-  algorithm = "RSA"
-}
-
-resource "acme_registration" "reg" {
-  account_key_pem = tls_private_key.private_key.private_key_pem
-  email_address   = "jedevc@gmail.com"
-}
-
-resource "acme_certificate" "certificate" {
-  account_key_pem           = acme_registration.reg.account_key_pem
-  common_name               = "*.apparea.dev"
-
-  dns_challenge {
-    provider = "gandiv5"
-
-    config = {
-      GANDIV5_API_KEY = var.gandi_key
-    }
-  }
+resource "gandi_livedns_record" "apparea_recursive_record" {
+  zone = data.gandi_livedns_domain.apparea_dev.name
+  name = "*"
+  type = "A"
+  ttl = 3600
+  values = [
+    hcloud_floating_ip.master.ip_address
+  ]
 }
