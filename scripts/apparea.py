@@ -26,6 +26,7 @@ def main():
 
     http_parser = subparsers.add_parser("http", help="proxy a http port")
     http_parser.add_argument("port", type=int, help="target port to proxy")
+    http_parser.add_argument("--subdomain", "-s", help="target domain to proxy to")
     http_parser.set_defaults(func=http)
     
     tcp_parser = subparsers.add_parser("tcp", help="proxy a raw tcp port")
@@ -44,8 +45,11 @@ def exponential_backoff(f):
         delay = 1
         while True:
             start = time.time()
-            f(*args, **kwargs)
+            res = f(*args, **kwargs)
             end = time.time()
+
+            if res:
+                break
 
             if end - start > 2:
                 # HACK: assume that if the process was running for longer than
@@ -59,8 +63,15 @@ def exponential_backoff(f):
     return wrapper
 
 def http(args):
+    if args.subdomain:
+        username = args.subdomain.split('.') + [USERNAME]
+        username.reverse()
+        username = ".".join(username)
+    else:
+        username = USERNAME
+
     forwards = ["-R", f"0.0.0.0:80:localhost:{args.port}"]
-    command = [*forwards, "-p", str(PORT), f"{USERNAME}@{SITE}"]
+    command = [*forwards, "-p", str(PORT), f"{username}@{SITE}"]
     if args.verbose:
         command.append("-v")
 
@@ -95,8 +106,10 @@ def run_ssh(args):
             sys.stdout.buffer.flush()
 
         proc.wait()
+        return False
     except KeyboardInterrupt:
         proc.terminate()
+        return True
 
 def configure():
     global SITE
