@@ -71,7 +71,7 @@ def http(args):
         username = USERNAME
 
     forwards = ["-R", f"0.0.0.0:80:localhost:{args.port}"]
-    command = [*forwards, "-p", str(PORT), f"{username}@{SITE}"]
+    command = [*forwards, "-T", "-p", str(PORT), f"{username}@{SITE}"]
     if args.verbose:
         command.append("-v")
 
@@ -80,7 +80,7 @@ def http(args):
 def tcp(args):
     forwards = [("-R", f"0.0.0.0:0:localhost:{port}") for port in args.ports]
     forwards = [item for forward in forwards for item in forward]
-    command = [*forwards, "-p", str(PORT), f"{USERNAME}@{SITE}"]
+    command = [*forwards, "-T", "-p", str(PORT), f"{USERNAME}@{SITE}"]
     if args.verbose:
         command.append("-v")
 
