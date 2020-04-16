@@ -1,7 +1,7 @@
 package forward
 
 type Forwarder interface {
-	ListenAndServe() error
+	Serve() error
 	Close()
 
 	ListenerAddress() string

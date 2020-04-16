@@ -145,7 +145,7 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 		hostname := server.generateHost(user, parts)
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
 
-		err := fwd.ListenAndServe()
+		err := fwd.Serve()
 		if err != nil {
 			req.Reply(false, nil)
 			return nil, err
@@ -161,7 +161,7 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 		hostname := server.generateHost(user, parts)
 		fwd = forward.NewRawForwarder(hostname, conn, fr)
 
-		err := fwd.ListenAndServe()
+		err := fwd.Serve()
 		if err != nil {
 			req.Reply(false, nil)
 			return nil, err

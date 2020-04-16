@@ -50,7 +50,7 @@ func (f RawForwarder) connect() (io.ReadWriteCloser, error) {
 	return ch, nil
 }
 
-func (f *RawForwarder) ListenAndServe() error {
+func (f *RawForwarder) Serve() error {
 	ln, err := net.Listen("tcp", f.Request.Address())
 	if err != nil {
 		return fmt.Errorf("Could not listen on %s", f.Request.Address())

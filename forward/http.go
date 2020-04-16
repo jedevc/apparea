@@ -27,7 +27,7 @@ var httpMap = make(map[string]*HTTPForwarder)
 var httpLock sync.Mutex
 var httpServer *http.Server
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func httpHandler(w http.ResponseWriter, r *http.Request) {
 	httpLock.Lock()
 	fr, ok := httpMap[r.Host]
 	httpLock.Unlock()
@@ -38,13 +38,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fr.handle(w, r)
+	err := fr.handle(w, r)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
 }
 
 func ServeHTTP(address string) error {
 	httpServer = &http.Server{
 		Addr:           address,
-		Handler:        http.HandlerFunc(handler),
+		Handler:        http.HandlerFunc(httpHandler),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
@@ -80,7 +84,7 @@ func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
 	return ch, nil
 }
 
-func (f *HTTPForwarder) ListenAndServe() error {
+func (f *HTTPForwarder) Serve() error {
 	httpLock.Lock()
 	if _, ok := httpMap[f.Hostname]; ok {
 		httpLock.Unlock()
