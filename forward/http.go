@@ -1,6 +1,8 @@
 package forward
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -111,13 +113,41 @@ func (f *HTTPForwarder) ListenerPort() uint32 {
 }
 
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
+	// connect back
 	tunn, err := f.connect()
 	if err != nil {
-		return nil
+		return err
 	}
 
-	r.Write(tunn)
-	io.Copy(w, tunn)
+	// forward request
+	err = r.Write(tunn)
+	if err != nil {
+		return err
+	}
+
+	// read response
+	var buffer bytes.Buffer
+	_, err = io.Copy(&buffer, tunn)
+	if err != nil {
+		return err
+	}
+	resp, err := http.ReadResponse(bufio.NewReader(&buffer), r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// copy to response
+	for k, vs := range resp.Header {
+		for _, v := range vs {
+			w.Header().Set(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
