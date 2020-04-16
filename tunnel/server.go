@@ -185,6 +185,6 @@ func (server Server) generateHost(user config.User, parts []string) string {
 	if len(parts) == 0 {
 		return fmt.Sprintf("%s.%s", user.Username, server.Hostname)
 	} else {
-		return fmt.Sprintf("%s.%s.%s", strings.Join(parts, "."), user.Username, server.Hostname)
+		return fmt.Sprintf("%s-%s.%s", strings.Join(parts, "-"), user.Username, server.Hostname)
 	}
 }
