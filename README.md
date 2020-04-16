@@ -7,6 +7,8 @@ over SSH, moving as much logic as possible to the server, while keeping the
 client as minimal as possible; in fact it's completely possible to just use
 the default SSH command built in to most linux distributions!
 
+For the website source code, see [jedevc/apparea-site](https://github.com/jedevc/apparea-site).
+
 ## Usage
 
 To get started, install and run the client helper script:
