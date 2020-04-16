@@ -35,13 +35,11 @@ func (server *Server) Run(address string) <-chan *Session {
 		for {
 			tcpConn, err := listener.Accept()
 			if err != nil {
-				log.Printf("Failed to accept incoming connection (%s)", err)
 				continue
 			}
 
 			sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, server.Config.SSHConfig)
 			if err != nil {
-				log.Printf("Failed to handshake (%s)", err)
 				continue
 			}
 
@@ -55,13 +53,18 @@ func (server *Server) Run(address string) <-chan *Session {
 }
 
 func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *Session {
-	log.Printf("New SSH connection from %s (%s)", conn.RemoteAddr(), conn.ClientVersion())
+	log.Printf("Incoming session from %s (%s)", conn.User(), conn.RemoteAddr())
 
 	views := make(chan View)
 	forwards := make(chan forward.Forwarder)
 	session := NewSession(views, forwards)
 
 	var closer sync.Once
+	closeChans := func() {
+		close(forwards)
+		close(views)
+		log.Printf("Closing session from %s (%s)", conn.User(), conn.RemoteAddr())
+	}
 
 	go func() {
 		for req := range reqs {
@@ -80,10 +83,7 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 			}
 		}
 
-		closer.Do(func() {
-			close(forwards)
-			close(views)
-		})
+		closer.Do(closeChans)
 	}()
 	go func() {
 		for newChannel := range chans {
@@ -99,10 +99,7 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 			}
 		}
 
-		closer.Do(func() {
-			close(forwards)
-			close(views)
-		})
+		closer.Do(closeChans)
 	}()
 
 	return session
