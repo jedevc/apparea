@@ -63,7 +63,7 @@ write_files:
         listen [::]:443 ssl http2;
 
         ssl_certificate_key /etc/letsencrypt/live/apparea.dev/privkey.pem;
-        ssl_certificate /etc/letsencrypt/live/apparea.dev/cert.pem;
+        ssl_certificate /etc/letsencrypt/live/apparea.dev/fullchain.pem;
         ssl_session_timeout 1d;
         ssl_session_cache shared:MozSSL:10m;
         ssl_session_tickets off;
@@ -87,7 +87,7 @@ write_files:
         listen [::]:443 ssl http2;
 
         ssl_certificate_key /etc/letsencrypt/live/apparea.dev/privkey.pem;
-        ssl_certificate /etc/letsencrypt/live/apparea.dev/cert.pem;
+        ssl_certificate /etc/letsencrypt/live/apparea.dev/fullchain.pem;
         ssl_session_timeout 1d;
         ssl_session_cache shared:MozSSL:10m;
         ssl_session_tickets off;
@@ -154,8 +154,7 @@ runcmd:
         --email jedevc@gmail.com --agree-tos
         -a certbot-plugin-gandi:dns \
         --certbot-plugin-gandi:dns-credentials /root/gandi.ini \
-        -d 'apparea.dev' -d '*.apparea.dev' \
-        --server https://acme-staging-v02.api.letsencrypt.org/directory"
+        -d 'apparea.dev' -d '*.apparea.dev'"
   - "systemctl restart nginx.service"
 
   - "/root/update/hugo.sh"
