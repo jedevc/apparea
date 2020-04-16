@@ -111,10 +111,19 @@ write_files:
       export HOME=/home/runner
       export GOPATH=/home/runner/go
 
+      STATUS=$(systemctl is-active apparea)
+
       go get -u github.com/jedevc/apparea
       go install github.com/jedevc/apparea
+
+      if [[ $STATUS -eq active ]]; then
+        systemctl stop apparea | true
+      fi
       cp /home/runner/go/bin/apparea /usr/local/bin
       setcap CAP_NET_BIND_SERVICE+ep /usr/local/bin/apparea
+      if [[ $STATUS -eq active ]]; then
+        systemctl start apparea | true
+      fi
   - path: /root/update/hugo.sh
     permissions: "0755"
     content: |
