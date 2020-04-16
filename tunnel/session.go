@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/jedevc/apparea/forward"
@@ -50,7 +51,7 @@ func NewSession(views chan View, forwards chan forward.Forwarder) *Session {
 	return &session
 }
 
-func (session *Session) Broadcast(msg []byte) (err error) {
+func (session *Session) Write(msg []byte) (n int, err error) {
 	session.messages = append(session.messages, msg)
 
 	session.lock.Lock()
@@ -61,6 +62,7 @@ func (session *Session) Broadcast(msg []byte) (err error) {
 		}
 	}
 	session.lock.Unlock()
+	n = len(msg)
 
 	return
 }
@@ -89,5 +91,5 @@ func (session *Session) handleForwarder(forward forward.Forwarder) {
 	session.forwards = append(session.forwards, forward)
 	session.lock.Unlock()
 
-	session.Broadcast([]byte("Listening on " + forward.ListenerAddress()))
+	fmt.Fprintf(session, ">>> Listening on %s\n", forward.ListenerAddress())
 }

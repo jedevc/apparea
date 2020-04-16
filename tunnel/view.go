@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"fmt"
 	"io"
 
 	"golang.org/x/crypto/ssh/terminal"
@@ -20,5 +19,5 @@ func NewStatusView(raw io.ReadWriter) StatusView {
 }
 
 func (view StatusView) Write(p []byte) (int, error) {
-	return fmt.Fprintf(view.term, ">>> %s\n", p)
+	return view.term.Write(p)
 }

@@ -70,8 +70,9 @@ func (server *Server) launchSession(conn *ssh.ServerConn, chans <-chan ssh.NewCh
 		for req := range reqs {
 			if req.Type == "tcpip-forward" {
 				forward, err := server.handleTCPForward(conn, req)
+				forward.AttachClientLog(session)
 				if err != nil {
-					session.Broadcast([]byte(fmt.Sprintf("Could not establish forwarding: %s", err)))
+					fmt.Fprintf(session, "Could not establish forwarding: %s\n", err)
 					continue
 				}
 				forwards <- forward

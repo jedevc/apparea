@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -19,6 +20,8 @@ import (
 type HTTPForwarder struct {
 	Request  ForwardRequest
 	Hostname string
+
+	clientLog io.Writer
 
 	connector *ssh.ServerConn
 }
@@ -61,8 +64,13 @@ func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest)
 	return &HTTPForwarder{
 		Request:   req,
 		Hostname:  hostname,
+		clientLog: ioutil.Discard,
 		connector: conn,
 	}
+}
+
+func (f *HTTPForwarder) AttachClientLog(w io.Writer) {
+	f.clientLog = w
 }
 
 func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
@@ -117,6 +125,8 @@ func (f *HTTPForwarder) ListenerPort() uint32 {
 }
 
 func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
+	now := time.Now()
+
 	// connect back
 	tunn, err := f.connect()
 	if err != nil {
@@ -140,6 +150,8 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	fmt.Fprintf(f.clientLog, "%s [%d] %s %s\n", now.Format("2006/01/02 15:04:05"), resp.StatusCode, r.Method, r.URL.Path)
 
 	// copy to response
 	for k, vs := range resp.Header {

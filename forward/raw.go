@@ -3,6 +3,7 @@ package forward
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
@@ -16,6 +17,8 @@ type RawForwarder struct {
 	Request  ForwardRequest
 	Hostname string
 
+	clientLog io.Writer
+
 	baseConn *ssh.ServerConn
 
 	lock     sync.Mutex
@@ -25,9 +28,10 @@ type RawForwarder struct {
 
 func NewRawForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest) *RawForwarder {
 	return &RawForwarder{
-		Request:  req,
-		Hostname: hostname,
-		baseConn: conn,
+		Request:   req,
+		Hostname:  hostname,
+		clientLog: ioutil.Discard,
+		baseConn:  conn,
 	}
 }
 
@@ -112,6 +116,10 @@ func (f *RawForwarder) Close() {
 		f.listener.Close()
 	}
 	f.lock.Unlock()
+}
+
+func (f *RawForwarder) AttachClientLog(w io.Writer) {
+	f.clientLog = w
 }
 
 func (f *RawForwarder) ListenerAddress() string {
