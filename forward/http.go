@@ -127,10 +127,12 @@ func (wrap TLSWrapper) Write(p []byte) (int, error) {
 }
 
 func (wrap TLSWrapper) Close() error {
-	fmt.Println(wrap.channel.Close())
-	fmt.Println(wrap.tlsConn.Close())
-	fmt.Println(wrap.inConn.Close())
-	fmt.Println(wrap.outConn.Close())
+	// we don't really care about errors here, let's just say they all succeed
+	wrap.channel.Close()
+	wrap.tlsConn.Close()
+	wrap.inConn.Close()
+	wrap.outConn.Close()
+
 	return nil
 }
 
