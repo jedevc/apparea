@@ -28,6 +28,11 @@ def main():
     http_parser.add_argument("port", type=int, help="target port to proxy")
     http_parser.add_argument("--subdomain", "-s", help="target domain to proxy to")
     http_parser.set_defaults(func=http)
+
+    http_parser = subparsers.add_parser("https", help="proxy a https port")
+    http_parser.add_argument("port", type=int, help="target port to proxy")
+    http_parser.add_argument("--subdomain", "-s", help="target domain to proxy to")
+    http_parser.set_defaults(func=https)
     
     tcp_parser = subparsers.add_parser("tcp", help="proxy a raw tcp port")
     tcp_parser.add_argument("ports", nargs="+", type=int, help="target ports to proxy")
@@ -71,6 +76,21 @@ def http(args):
         username = USERNAME
 
     forwards = ["-R", f"0.0.0.0:80:localhost:{args.port}"]
+    command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{username}@{SITE}"]
+    if args.verbose:
+        command.append("-v")
+
+    run_ssh(command)
+
+def https(args):
+    if args.subdomain:
+        username = args.subdomain.split('.') + [USERNAME]
+        username.reverse()
+        username = ".".join(username)
+    else:
+        username = USERNAME
+
+    forwards = ["-R", f"0.0.0.0:443:localhost:{args.port}"]
     command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{username}@{SITE}"]
     if args.verbose:
         command.append("-v")
