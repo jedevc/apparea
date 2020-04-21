@@ -68,40 +68,34 @@ def exponential_backoff(f):
     return wrapper
 
 def http(args):
-    if args.subdomain:
-        username = args.subdomain.split('.') + [USERNAME]
-        username.reverse()
-        username = ".".join(username)
-    else:
-        username = USERNAME
-
-    forwards = ["-R", f"0.0.0.0:80:localhost:{args.port}"]
-    command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{username}@{SITE}"]
-    if args.verbose:
-        command.append("-v")
-
-    run_ssh(command)
+    username = craft_username(args.subdomain)
+    forward(80, [args.port], username=username, verbose=args.verbose)
 
 def https(args):
-    if args.subdomain:
-        username = args.subdomain.split('.') + [USERNAME]
+    username = craft_username(args.subdomain)
+    forward(443, [args.port], username=username, verbose=args.verbose)
+
+def tcp(args):
+    forward(0, args.ports, verbose=args.verbose)
+
+def craft_username(subdomain):
+    if subdomain:
+        username = subdomain.split('.') + [USERNAME]
         username.reverse()
         username = ".".join(username)
     else:
         username = USERNAME
+    
+    return username
 
-    forwards = ["-R", f"0.0.0.0:443:localhost:{args.port}"]
-    command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{username}@{SITE}"]
-    if args.verbose:
-        command.append("-v")
+def forward(dest, srcs, username=None, verbose=False):
+    if username is None:
+        username = USERNAME
 
-    run_ssh(command)
-
-def tcp(args):
-    forwards = [("-R", f"0.0.0.0:0:localhost:{port}") for port in args.ports]
+    forwards = [("-R", f"0.0.0.0:{dest}:localhost:{src}") for src in srcs]
     forwards = [item for forward in forwards for item in forward]
-    command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{USERNAME}@{SITE}"]
-    if args.verbose:
+    command = [*forwards, "-T", "-i", KEY_FILE, "-p", str(PORT), f"{username}@{SITE}"]
+    if verbose:
         command.append("-v")
 
     run_ssh(command)
