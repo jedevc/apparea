@@ -135,15 +135,16 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 		return nil, err
 	}
 
+	user, parts, ok := server.Config.Users.LookupUser(conn.User())
+	if !ok {
+		panic("Internal error: user should exist")
+	}
+
+	hostname := server.generateHost(user, parts)
+
 	var fwd forward.Forwarder
 	switch fr.Port {
 	case 80:
-		user, parts, ok := server.Config.Users.LookupUser(conn.User())
-		if !ok {
-			panic("Internal error: user should exist")
-		}
-
-		hostname := server.generateHost(user, parts)
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr)
 
 		err := fwd.Serve()
@@ -153,13 +154,17 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 		}
 
 		req.Reply(true, nil)
-	case 0:
-		user, parts, ok := server.Config.Users.LookupUser(conn.User())
-		if !ok {
-			panic("Internal error: user should exist")
+	case 443:
+		fwd = forward.NewHTTPForwarder(hostname, conn, fr).UseTLS(true)
+
+		err := fwd.Serve()
+		if err != nil {
+			req.Reply(false, nil)
+			return nil, err
 		}
 
-		hostname := server.generateHost(user, parts)
+		req.Reply(true, nil)
+	case 0:
 		fwd = forward.NewRawForwarder(hostname, conn, fr)
 
 		err := fwd.Serve()

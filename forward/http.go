@@ -2,10 +2,11 @@ package forward
 
 import (
 	"bufio"
-	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -24,6 +25,7 @@ type HTTPForwarder struct {
 	clientLog io.Writer
 
 	connector *ssh.ServerConn
+	useTLS    bool
 }
 
 var httpMap = make(map[string]*HTTPForwarder)
@@ -43,6 +45,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := fr.handle(w, r)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(500)
 		return
 	}
@@ -69,8 +72,66 @@ func NewHTTPForwarder(hostname string, conn *ssh.ServerConn, req ForwardRequest)
 	}
 }
 
+func (f *HTTPForwarder) UseTLS(use bool) *HTTPForwarder {
+	f.useTLS = use
+	return f
+}
+
 func (f *HTTPForwarder) AttachClientLog(w io.Writer) {
 	f.clientLog = w
+}
+
+type TLSWrapper struct {
+	channel ssh.Channel
+	inConn  net.Conn
+	outConn net.Conn
+	tlsConn net.Conn
+}
+
+func NewTLSWrapper(ch ssh.Channel) TLSWrapper {
+	inConn, outConn := net.Pipe()
+
+	go func() {
+		// writing to client
+		_, err := io.Copy(ch, inConn)
+		if err != nil {
+			log.Printf("testing: %s", err)
+		}
+	}()
+	go func() {
+		// reading from client
+		_, err := io.Copy(inConn, ch)
+		if err != nil {
+			log.Printf("testing: %s", err)
+		}
+	}()
+
+	fin := tls.Client(outConn, &tls.Config{
+		InsecureSkipVerify: true,
+	})
+
+	return TLSWrapper{
+		channel: ch,
+		inConn:  inConn,
+		outConn: outConn,
+		tlsConn: fin,
+	}
+}
+
+func (wrap TLSWrapper) Read(p []byte) (int, error) {
+	return wrap.tlsConn.Read(p)
+}
+
+func (wrap TLSWrapper) Write(p []byte) (int, error) {
+	return wrap.tlsConn.Write(p)
+}
+
+func (wrap TLSWrapper) Close() error {
+	fmt.Println(wrap.channel.Close())
+	fmt.Println(wrap.tlsConn.Close())
+	fmt.Println(wrap.inConn.Close())
+	fmt.Println(wrap.outConn.Close())
+	return nil
 }
 
 func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
@@ -88,6 +149,11 @@ func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
 		return nil, fmt.Errorf("could not open channel (is the port open?)")
 	}
 	go ssh.DiscardRequests(reqs)
+
+	if f.useTLS {
+		res := NewTLSWrapper(ch)
+		return res, nil
+	}
 
 	return ch, nil
 }
@@ -132,6 +198,7 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	defer tunn.Close()
 
 	// forward request
 	err = r.Write(tunn)
@@ -140,12 +207,7 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// read response
-	var buffer bytes.Buffer
-	_, err = io.Copy(&buffer, tunn)
-	if err != nil {
-		return err
-	}
-	resp, err := http.ReadResponse(bufio.NewReader(&buffer), r)
+	resp, err := http.ReadResponse(bufio.NewReader(tunn), r)
 	if err != nil {
 		return err
 	}
