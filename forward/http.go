@@ -59,6 +59,7 @@ func ServeHTTP(address string) error {
 		MaxHeaderBytes: 1 << 20,
 	}
 
+	log.Printf("Listening for HTTP connections on %s...", address)
 	return httpServer.ListenAndServe()
 }
 

@@ -30,7 +30,7 @@ func (server *Server) Run(address string) <-chan *Session {
 
 	sessions := make(chan *Session)
 
-	log.Printf("Listening on %s...", address)
+	log.Printf("Listening for SSH connections on %s...", address)
 	go func() {
 		for {
 			tcpConn, err := listener.Accept()
