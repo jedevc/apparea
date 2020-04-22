@@ -7,8 +7,11 @@ import glob
 import json
 import subprocess
 import sys
+import threading
 import time
 import os
+
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 CONFIG_FILE = os.path.expanduser("~/.apparea.json")
 
@@ -37,6 +40,10 @@ def main():
     tcp_parser = subparsers.add_parser("tcp", help="proxy a raw tcp port")
     tcp_parser.add_argument("ports", nargs="+", type=int, help="target ports to proxy")
     tcp_parser.set_defaults(func=tcp)
+
+    http_parser = subparsers.add_parser("serve-http", help="serve the current directory and proxy it")
+    http_parser.add_argument("--subdomain", "-s", help="target domain to proxy to")
+    http_parser.set_defaults(func=serve_http)
 
     args = parser.parse_args()
 
@@ -77,6 +84,27 @@ def https(args):
 
 def tcp(args):
     forward(0, args.ports, verbose=args.verbose)
+
+class CustomHandler(SimpleHTTPRequestHandler):
+    server_version = "AppArea"
+    sys_version = ""
+
+    def log_message(self, *args):
+        pass
+
+def serve_http(args):
+    address = ("localhost", 0)
+    httpd = ThreadingHTTPServer(address, CustomHandler)
+    port = httpd.server_address[1]
+
+    httpd_thread = threading.Thread(target=httpd.serve_forever)
+    httpd_thread.start()
+
+    username = craft_username(args.subdomain)
+    forward(80, [port], username=username, verbose=args.verbose)
+
+    httpd.shutdown()
+    httpd_thread.join()
 
 def craft_username(subdomain):
     if subdomain:
