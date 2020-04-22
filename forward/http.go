@@ -3,6 +3,7 @@ package forward
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -91,18 +92,19 @@ type TLSWrapper struct {
 func NewTLSWrapper(ch ssh.Channel) TLSWrapper {
 	inConn, outConn := net.Pipe()
 
+	// we log errors cause there's not really anything else we can do with them
 	go func() {
 		// writing to client
 		_, err := io.Copy(ch, inConn)
-		if err != nil {
-			log.Printf("testing: %s", err)
+		if err != nil && !errors.Is(err, io.EOF) {
+			log.Printf("could not copy to client: %s", err)
 		}
 	}()
 	go func() {
 		// reading from client
 		_, err := io.Copy(inConn, ch)
-		if err != nil {
-			log.Printf("testing: %s", err)
+		if err != nil && !errors.Is(err, io.EOF) {
+			log.Printf("could not copy to client: %s", err)
 		}
 	}()
 
@@ -148,7 +150,7 @@ func (f HTTPForwarder) connect() (io.ReadWriteCloser, error) {
 
 	ch, reqs, err := f.connector.OpenChannel("forwarded-tcpip", data)
 	if err != nil {
-		return nil, fmt.Errorf("could not open channel (is the port open?)")
+		return nil, fmt.Errorf("could not open channel: %w", err)
 	}
 	go ssh.DiscardRequests(reqs)
 
@@ -205,13 +207,13 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	// forward request
 	err = r.Write(tunn)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not forward request: %w", err)
 	}
 
 	// read response
 	resp, err := http.ReadResponse(bufio.NewReader(tunn), r)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not read back response: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -226,7 +228,7 @@ func (f HTTPForwarder) handle(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(resp.StatusCode)
 	_, err = io.Copy(w, resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not write copy response: %w", err)
 	}
 
 	return nil
