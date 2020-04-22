@@ -153,6 +153,7 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 			return nil, err
 		}
 
+		log.Printf("Forwarding http from %s (%s)", conn.User(), conn.RemoteAddr())
 		req.Reply(true, nil)
 	case 443:
 		fwd = forward.NewHTTPForwarder(hostname, conn, fr).UseTLS(true)
@@ -163,6 +164,7 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 			return nil, err
 		}
 
+		log.Printf("Forwarding https from %s (%s)", conn.User(), conn.RemoteAddr())
 		req.Reply(true, nil)
 	case 0:
 		fwd = forward.NewRawForwarder(hostname, conn, fr)
@@ -172,6 +174,8 @@ func (server *Server) handleTCPForward(conn *ssh.ServerConn, req *ssh.Request) (
 			req.Reply(false, nil)
 			return nil, err
 		}
+
+		log.Printf("Forwarding tcp from %s (%s) to :%d", conn.User(), conn.RemoteAddr(), fwd.ListenerPort())
 
 		bs := make([]byte, 0)
 		helpers.PackInt(&bs, fwd.ListenerPort())
