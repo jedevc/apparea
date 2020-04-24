@@ -173,17 +173,17 @@ def configure():
         print("Leave the fields blank for the default option.\n")
 
         site = "apparea.dev"
-        new_site = input(f"Site [Default: {site}]: ")
+        new_site = input(f"Site [default={site}]: ")
         if new_site:
             site = new_site
 
         port = 21
-        new_port = input(f"Port [Default: {port}]: ")
+        new_port = input(f"Port [default={port}]: ")
         if new_port:
             port = int(new_port)
 
         username = getpass.getuser()
-        new_username = input(f"Username [Default: {username}]: ")
+        new_username = input(f"Username [default={username}]: ")
         if new_username:
             username = new_username
 
@@ -191,7 +191,7 @@ def configure():
         keyfiles = list(filter(lambda s: ".pub" not in s, keyfiles))
         keyfile = keyfiles[0]
 
-        new_keyfile = input(f"SSH Key [Default: {keyfile}]: ")
+        new_keyfile = input(f"SSH Key [default={keyfile}]: ")
         if new_keyfile:
             keyfile = os.path.abspath(os.path.expanduser(new_keyfile))
 
