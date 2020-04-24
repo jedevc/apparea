@@ -156,6 +156,7 @@ write_files:
       hugo
 
 runcmd:
+  - "timedatectl set-timezone UTC"
   - "service networking restart"
 
   - "pip3 install certbot-plugin-gandi"
