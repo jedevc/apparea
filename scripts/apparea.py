@@ -170,7 +170,7 @@ def configure():
     except FileNotFoundError:
         print("Welcome to apparea!")
         print("Since this is your first time, this helper will get you setup.")
-        print("Leave the fields blank for the default option")
+        print("Leave the fields blank for the default option.\n")
 
         site = "apparea.dev"
         new_site = input(f"Site [Default: {site}]: ")
