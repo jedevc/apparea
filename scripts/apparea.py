@@ -169,20 +169,21 @@ def configure():
             KEY_FILE = config["keyfile"]
     except FileNotFoundError:
         print("Welcome to apparea!")
-        print("Since this is your first time, this helper will get you setup.\n")
+        print("Since this is your first time, this helper will get you setup.")
+        print("Leave the fields blank for the default option.\n")
 
         site = "apparea.dev"
-        new_site = input(f"Site [{site}]: ")
+        new_site = input(f"Site [Default: {site}]: ")
         if new_site:
             site = new_site
 
         port = 21
-        new_port = input(f"Port [{port}]: ")
+        new_port = input(f"Port [Default: {port}]: ")
         if new_port:
             port = int(new_port)
 
         username = getpass.getuser()
-        new_username = input(f"Username [{username}]: ")
+        new_username = input(f"Username [Default: {username}]: ")
         if new_username:
             username = new_username
 
@@ -190,7 +191,7 @@ def configure():
         keyfiles = list(filter(lambda s: ".pub" not in s, keyfiles))
         keyfile = keyfiles[0]
 
-        new_keyfile = input(f"SSH Key [{keyfile}]: ")
+        new_keyfile = input(f"SSH Key [Default: {keyfile}]: ")
         if new_keyfile:
             keyfile = os.path.abspath(os.path.expanduser(new_keyfile))
 
