@@ -149,9 +149,9 @@ write_files:
       export HOME=/home/runner
       cd $HOME
 
-      git clone https://github.com/jedevc/apparea-site.git --recurse-submodules | true
+      rm -rf apparea-site
+      git clone https://github.com/jedevc/apparea-site.git --recurse-submodules
       cd apparea-site
-      git pull
 
       hugo
 
