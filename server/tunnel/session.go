@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jedevc/apparea/forward"
+	"github.com/jedevc/apparea/server/forward"
 )
 
 type Session struct {

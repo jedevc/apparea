@@ -14,7 +14,7 @@ func InitializeConfigs(force bool) error {
 		}
 	}
 
-	err := os.Mkdir(configDirectory, os.ModeDir|0o700)
+	err := os.MkdirAll(configDirectory, os.ModeDir|0o700)
 	if err != nil {
 		return err
 	}

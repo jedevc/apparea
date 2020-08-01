@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jedevc/apparea/config"
-	"github.com/jedevc/apparea/forward"
-	"github.com/jedevc/apparea/helpers"
+	"github.com/jedevc/apparea/server/config"
+	"github.com/jedevc/apparea/server/forward"
+	"github.com/jedevc/apparea/server/helpers"
 	"golang.org/x/crypto/ssh"
 )
 

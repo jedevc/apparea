@@ -1,0 +1,67 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:v2.2
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+
+      - --certificatesresolvers.resolver.acme.email=$ACME_EMAIL
+      - --certificatesresolvers.resolver.acme.storage=/acme/acme.json
+      - --certificatesresolvers.resolver.acme.caserver=$ACME_API
+      - --certificatesresolvers.resolver.acme.dnschallenge=true
+      - --certificatesresolvers.resolver.acme.dnschallenge.provider=$ACME_PROVIDER
+    network_mode: host
+    volumes:
+      - acme:/acme
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  app:
+    build:
+      context: ./
+      dockerfile: server/Dockerfile
+    environment:
+      DOMAIN: $DOMAIN
+      SSH_ADDRESS: 0.0.0.0:21
+      HTTP_ADDRESS: 127.0.0.1:8000
+    volumes:
+      - "./config:/root/.apparea/"
+    network_mode: host
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.services.app.loadbalancer.server.port=8000"
+
+      - "traefik.http.routers.app-http.entrypoints=http"
+      - "traefik.http.routers.app-http.rule=HostRegexp(`{sub:[a-z]+}.$DOMAIN`)"
+      - "traefik.http.routers.app-http.service=app"
+
+      - "traefik.http.routers.app-https.entrypoints=https"
+      - "traefik.http.routers.app-https.rule=HostRegexp(`{sub:[a-z]+}.$DOMAIN`)"
+      - "traefik.http.routers.app-https.service=app"
+      - "traefik.http.routers.app-https.tls=true"
+      - "traefik.http.routers.app-https.tls.domains[0].main=*.$DOMAIN"
+      - "traefik.http.routers.app-https.tls.certresolver=resolver"
+
+  site:
+    build:
+      context: ./
+      dockerfile: site/Dockerfile
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      - "traefik.http.routers.site-http.entrypoints=http"
+      - "traefik.http.routers.site-http.rule=Host(`$DOMAIN`)"
+      - "traefik.http.routers.site-http.middlewares=redirect-to-https"
+
+      - "traefik.http.routers.site-https.entrypoints=https"
+      - "traefik.http.routers.site-https.rule=Host(`$DOMAIN`)"
+      - "traefik.http.routers.site-https.tls=true"
+      - "traefik.http.routers.site-https.tls.certresolver=resolver"
+
+volumes:
+  acme:

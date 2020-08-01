@@ -4,9 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/jedevc/apparea/config"
-	"github.com/jedevc/apparea/forward"
-	"github.com/jedevc/apparea/tunnel"
+	"github.com/jedevc/apparea/server/config"
+	"github.com/jedevc/apparea/server/forward"
+	"github.com/jedevc/apparea/server/tunnel"
 	"github.com/urfave/cli/v2"
 )
 

@@ -1,0 +1,19 @@
+# docker stuff
+**/Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+
+# git stuff
+.git
+.gitignore
+
+# env variables
+.env
+.env.example
+
+# readmes
+**/README.md
+**/LICENSE.txt
+
+# config
+config/

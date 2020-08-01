@@ -1,0 +1,48 @@
+baseURL = "/"
+languageCode = "en-gb"
+title = "AppArea"
+
+theme = "whisper"
+
+pygmentsCodeFences = true
+pygmentsCodefencesGuessSyntax = true
+pygmentsUseClasses = true
+
+summaryLength = 10
+
+[menu]
+  [[menu.main]]
+  name = "Home"
+  url = "/"
+  weight = 1
+
+  [[menu.main]]
+  name = "GitHub"
+  url = "https://github.com/jedevc/apparea"
+  weight = 2
+
+  [[menu.main]]
+  name = "Docs"
+  url = "/docs/"
+  weight = 3
+
+[params]
+homepage_button_link = '/docs'
+homepage_button_text = 'Read The Docs'
+homepage_intro = 'Cast your localhost apps onto the internet and share them with the world!'
+homepage_image = '/images/terminal.gif'
+enable_anchor_link = true
+
+  [params.homepage_meta_tags]
+  meta_description = "Cast your localhost apps onto the internet and share them with the world!"
+  meta_og_title = "AppArea"
+  meta_og_type = "website"
+  meta_og_url = "https://apparea.dev"
+  meta_og_description = "Cast your localhost apps onto the internet and share them with the world!"
+  meta_twitter_card = "summary"
+  meta_twitter_site = "@jedevc"
+  meta_twitter_creator = "@jedevc"
+
+  [params.logo]
+  mobile = "/images/logo-mobile.svg"
+  standard  = "/images/logo.svg"

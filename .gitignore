@@ -1,8 +1,7 @@
-# final binary
-apparea
+# custom env
+.env
+docker-compose.override.yml
 
-# terraform
-.terraform/
-*.tfvars
-*.tfstate
-*.tfstate.backup
+# docker volumes
+config
+server-config

@@ -7,7 +7,52 @@ over SSH, moving as much logic as possible to the server, while keeping the
 client as minimal as possible; in fact it's completely possible to just use
 the default SSH command built in to most linux distributions!
 
-For the website source code, see [jedevc/apparea-site](https://github.com/jedevc/apparea-site).
+## Installation
+
+Clone the repository:
+
+    $ git clone --recursive https://github.com/jedevc/apparea.git
+    $ cd apparea
+
+Then you need to configure everything:
+
+1. Create `.env` using `.example.env` as a template.
+2. Create `docker-compose.override.yml` to configure ACME DNS challenge
+   environment variables for the traefik service.
+3. Then, create the required server config files:
+
+    ```
+    $ mkdir -p config
+    $ ssh-keygen -N "" -f ./config/id_rsa -t rsa -b 4096
+    $ touch config/authorized_keys
+    ```
+
+    You should have the following files:
+
+    ```
+    $ tree config
+    config
+    ├── authorized_keys
+    ├── id_rsa
+    └── id_rsa.pub
+
+    0 directories, 3 files
+    ```
+
+4. Then you can bring the containers up:
+
+    ```
+    $ docker-compose up
+    ```
+
+## Configuration format
+
+The format is identical to the authorized keys format followed by normal SSH
+servers, however, the comment field is used to contain the username.
+
+```
+ssh-<algorithm> <key> <username>
+```
 
 ## Usage
 
@@ -18,8 +63,8 @@ To get started, install and run the client helper script:
     $ ./apparea.py
     ...
 
-Make sure that the server owner has copied your key and username over to the
-server's config file!
+Make sure that you copy your key and username over to config/authorized_keys
+and restart the server.
 
 Now you can expose ports on your local machine to the server!
 
@@ -35,44 +80,4 @@ Once you've got your key and username in the server's config file, you can
 just execute the following to expose local port 8080:
 
     $ ssh -R 0.0.0.0:80:localhost:8080 -p 21 jedevc@apparea.dev
-
-## Server
-
-Setting up the server is a bit more involved, but not that tricky.
-
-To install it:
-
-    $ go get github.com/jedevc/apparea
-    $ go install github.com/jedevc/apparea
-
-Then, to generate server keys and create the config file:
-
-    $ apparea setup
-
-To add users to the server, modify the `.apparea/authorized_keys` file as
-follows:
-
-```
-ssh-<algorithm> <key> <username>
-```
-
-The format is identical to the authorized keys format followed by normal ssh
-servers, however, the comment field is used to container the username.
-
-Once you've configured your allowed users:
-
-    $ apparea serve --bind-ssh 0.0.0.0:21 --bind-http 0.0.0.0:80
-
-However, you probably don't want to do this, as this requires running the
-program as root. For better ways of running the server see the deployment
-section.
-
-## Deployment
-
-Deployment of the server can be tricky.
-
-Setup on <apparea.dev> uses an nginx instance in front of a version of
-apparea which is bound to localhost:8080 for http, and uses
-`CAP_NET_BIND_SERVICE+ep` for listening on 0.0.0.0:21 for ssh.
-
-You can see the configs for how the setup is done exactly in `deploy/`.
+    >>> Listening on http://jedevc.apparea.dev
