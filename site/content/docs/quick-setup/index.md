@@ -19,7 +19,7 @@ connect.
 To get started, download the client helper script:
 
 ```bash
-> wget https://raw.githubusercontent.com/jedevc/apparea/master/scripts/apparea.py
+$ wget https://raw.githubusercontent.com/jedevc/apparea/master/scripts/apparea.py
 ```
 
 This script wraps the SSH command installed on your system with all the right
@@ -29,8 +29,8 @@ Now, you can run the script, answering some questions to configure your
 global settings (to use this server, most of the defaults should be fine).
 
 ```bash
-> chmod +x apparea.py
-> ./apparea.py
+$ chmod +x apparea.py
+$ ./apparea.py
 Welcome to apparea!
 Since this is your first time, this helper will get you setup.
 
@@ -64,7 +64,7 @@ location of choice, or even not install it globally at all.
 Connecting and casting a port is super easy now:
 
 ```bash
-> apparea http 8000
+$ apparea http 8000
 >>> Listening on http://user.apparea.dev
 ```
 

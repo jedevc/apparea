@@ -14,7 +14,7 @@ Using the helper script, you can specify the `--subdomain` flag to specify a
 subdomain of your username.
 
 ```bash
-> apparea http 8000 --subdomain foo
+$ apparea http 8000 --subdomain foo
 >>> Listening on http://foo-user.apparea.dev
 ```
 
@@ -30,19 +30,19 @@ problems.
 To cast HTTP from port 8000:
 
 ```bash
-> ssh -R 0.0.0.0:80:localhost:8000 -p 21 user@apparea.dev
+$ ssh -R 0.0.0.0:80:localhost:8000 -p 21 user@apparea.dev
 ```
 
 To cast HTTPS from port 8000:
 
 ```bash
-> ssh -R 0.0.0.0:443:localhost:8000 -p 21 user@apparea.dev
+$ ssh -R 0.0.0.0:443:localhost:8000 -p 21 user@apparea.dev
 ```
 
 To cast TCP from port 4000:
 
 ```bash
-> ssh -R 0.0.0.0:0:localhost:4000 -p 21 user@apparea.dev
+$ ssh -R 0.0.0.0:0:localhost:4000 -p 21 user@apparea.dev
 ```
 
 ## Forwarding a remote host
@@ -53,7 +53,7 @@ the tunnel at any remote service you can access.
 To cast HTTP from port 8000 on the hostname `server.lan`:
 
 ```bash
-> ssh -R 0.0.0.0:80:server.lan:8000 -p 21 user@apparea.dev
+$ ssh -R 0.0.0.0:80:server.lan:8000 -p 21 user@apparea.dev
 ```
 
 ### Caveats

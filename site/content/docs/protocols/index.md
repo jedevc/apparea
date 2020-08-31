@@ -17,7 +17,7 @@ HTTPS exposed to the end-user (depending on server configuration).
 To cast an HTTP port:
 
 ```bash
-> apparea http 8000
+$ apparea http 8000
 >>> Listening on http://user.apparea.dev
 ```
 
@@ -30,7 +30,7 @@ The client helper includes a handy subcommand for serving the current
 directory and automatically proxying it to AppArea.
 
 ```bash
-> apparea serve-http
+$ apparea serve-http
 >>> Listening on http://user.apparea.dev
 ```
 
@@ -42,7 +42,7 @@ compatibility reasons.
 To cast an HTTPS port:
 
 ```bash
-> apparea https 8000
+$ apparea https 8000
 >>> Listening on http://user.apparea.dev
 ```
 
@@ -70,7 +70,7 @@ TCP forwarding is the lowest (and most primitive) layer of forwarding and can
 To cast a TCP port:
 
 ```bash
-> apparea tcp 8000
+$ apparea tcp 8000
 >>> Listening on user.apparea.dev:?????
 ```
 
